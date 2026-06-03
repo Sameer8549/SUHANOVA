@@ -49,11 +49,12 @@ import com.example.suhanova.theme.TextPrimary
 import com.example.suhanova.theme.TextSecondary
 import com.example.suhanova.ui.components.Chip
 import com.example.suhanova.ui.components.GlassCard
+import com.example.suhanova.ui.components.PageBackButton
 import com.example.suhanova.ui.components.StarFieldCanvas
 import java.net.URLEncoder
 
 @Composable
-fun LibraryScreen() {
+fun LibraryScreen(onBack: () -> Unit = {}) {
     val ctx = LocalContext.current
     val db = remember { SuhanovaDatabase.getDatabase(ctx) }
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
@@ -88,6 +89,7 @@ fun LibraryScreen() {
                 "Library",
                 style = MaterialTheme.typography.headlineMedium.copy(color = TextPrimary, fontWeight = FontWeight.ExtraBold),
             )
+            PageBackButton(onClick = onBack)
             Text(
                 listOf(studentClass, board, targetExam).filter { it.isNotBlank() }.joinToString(" · ")
                     .ifBlank { "Resources adapt after setup" },

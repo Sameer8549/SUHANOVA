@@ -53,7 +53,7 @@ val WEAK_TOPIC_ASKS = listOf(
 fun formatTime(ts: Long): String = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(ts))
 
 @Composable
-fun NovaChatScreen() {
+fun NovaChatScreen(onBack: () -> Unit = {}) {
     val ctx        = LocalContext.current
     val repository = remember { NovaBestFriendRepository() }
     val scope      = rememberCoroutineScope()
@@ -118,6 +118,10 @@ fun NovaChatScreen() {
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
             ) {
+                TextButton(onClick = onBack) {
+                    Text("‹ Back", style = MaterialTheme.typography.labelMedium.copy(color = NovaGold, fontWeight = FontWeight.Bold))
+                }
+
                 // Nova avatar with pulsing glow
                 val infTrans = rememberInfiniteTransition(label = "novaAvatar")
                 val avatarPulse by infTrans.animateFloat(0.92f, 1.08f, infiniteRepeatable(tween(1800, easing = EaseInOutSine), RepeatMode.Reverse), "avatarPulse")

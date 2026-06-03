@@ -111,14 +111,14 @@ fun SuhanovaNavigation() {
                 entryProvider = { key ->
                     when (key) {
                         is Home     -> NavEntry(key) { HomeScreen(onNavigate = ::navigateTo) }
-                        is Study    -> NavEntry(key) { StudyScreen(onNavigate = ::navigateTo) }
-                        is Quiz     -> NavEntry(key) { QuizScreen(onNavigate  = ::navigateTo) }
-                        is Progress -> NavEntry(key) { ProgressScreen() }
-                        is Rewards  -> NavEntry(key) { RewardsScreen() }
-                        is Library  -> NavEntry(key) { LibraryScreen() }
-                        is Roadmap  -> NavEntry(key) { RoadmapScreen() }
-                        is NovaChat -> NavEntry(key) { NovaChatScreen() }
-                        is Settings -> NavEntry(key) { SettingsScreen() }
+                        is Study    -> NavEntry(key) { StudyScreen(onNavigate = ::navigateTo, onBack = { navigateTo("home") }) }
+                        is Quiz     -> NavEntry(key) { QuizScreen(onNavigate  = ::navigateTo, onBack = { navigateTo("home") }) }
+                        is Progress -> NavEntry(key) { ProgressScreen(onBack = { navigateTo("home") }) }
+                        is Rewards  -> NavEntry(key) { RewardsScreen(onBack = { navigateTo("home") }) }
+                        is Library  -> NavEntry(key) { LibraryScreen(onBack = { navigateTo("home") }) }
+                        is Roadmap  -> NavEntry(key) { RoadmapScreen(onBack = { navigateTo("home") }) }
+                        is NovaChat -> NavEntry(key) { NovaChatScreen(onBack = { if (backStack.size > 1) backStack.removeLast() }) }
+                        is Settings -> NavEntry(key) { SettingsScreen(onBack = { if (backStack.size > 1) backStack.removeLast() else navigateTo("home") }) }
                         else        -> NavEntry(Home) { HomeScreen(onNavigate = ::navigateTo) }
                     }
                 }

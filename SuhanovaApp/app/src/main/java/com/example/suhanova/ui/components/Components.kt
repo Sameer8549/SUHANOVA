@@ -319,6 +319,16 @@ fun NovaButton(
     }
 }
 
+@Composable
+fun PageBackButton(
+    onClick: () -> Unit,
+    label: String = "‹ Back",
+) {
+    TextButton(onClick = onClick) {
+        Text(label, style = MaterialTheme.typography.labelMedium.copy(color = NovaGold, fontWeight = FontWeight.Bold))
+    }
+}
+
 // ─── STREAK RING ──────────────────────────────────────────────────────────────
 
 @Composable

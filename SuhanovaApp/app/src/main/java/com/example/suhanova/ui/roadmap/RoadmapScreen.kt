@@ -48,6 +48,7 @@ import com.example.suhanova.theme.TextMuted
 import com.example.suhanova.theme.TextPrimary
 import com.example.suhanova.theme.TextSecondary
 import com.example.suhanova.ui.components.GlassCard
+import com.example.suhanova.ui.components.PageBackButton
 import com.example.suhanova.ui.components.StarFieldCanvas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -99,7 +100,7 @@ Do not assume completed chapters, scores, streaks, or old progress. Use only the
 }
 
 @Composable
-fun RoadmapScreen() {
+fun RoadmapScreen(onBack: () -> Unit = {}) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val repository = remember { RoadmapAIRepository() }
@@ -133,6 +134,7 @@ fun RoadmapScreen() {
                                 fontWeight = FontWeight.ExtraBold,
                             )
                         )
+                        PageBackButton(onClick = onBack)
                         Text(
                             "Nova builds the path from your answers. No pre-added progress.",
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),

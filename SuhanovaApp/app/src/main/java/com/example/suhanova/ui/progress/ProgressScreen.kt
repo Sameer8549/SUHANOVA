@@ -31,7 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ProgressScreen() {
+fun ProgressScreen(onBack: () -> Unit = {}) {
     val ctx = LocalContext.current
     val db  = remember { SuhanovaDatabase.getDatabase(ctx) }
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
@@ -100,6 +100,7 @@ fun ProgressScreen() {
         contentPadding = PaddingValues(top = 24.dp, bottom = 110.dp),
     ) {
         item {
+            PageBackButton(onClick = onBack)
             Text("Your Progress",
                 style = MaterialTheme.typography.headlineMedium.copy(color = TextPrimary, fontWeight = FontWeight.ExtraBold))
             Text(

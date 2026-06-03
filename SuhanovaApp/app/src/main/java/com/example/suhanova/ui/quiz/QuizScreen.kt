@@ -43,7 +43,7 @@ val QUIZ_SUBJECTS = listOf(
 )
 
 @Composable
-fun QuizScreen(onNavigate: (String) -> Unit) {
+fun QuizScreen(onNavigate: (String) -> Unit, onBack: () -> Unit = {}) {
     val ctx = LocalContext.current
     val db = remember { SuhanovaDatabase.getDatabase(ctx) }
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
@@ -78,6 +78,7 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
                 selectedTopic   = selectedTopic,
                 catalogSubjects = catalogSubjects,
                 catalogChapters = catalogChapters,
+                onBack          = onBack,
                 onSubjectSelect = { selectedSubject = it },
                 onTopicSelect   = { selectedTopic = it },
                 onStart = {
@@ -196,6 +197,7 @@ fun SubjectSelectScreen(
     selectedTopic: String,
     catalogSubjects: List<String>,
     catalogChapters: List<String>,
+    onBack: () -> Unit,
     onSubjectSelect: (String) -> Unit,
     onTopicSelect: (String) -> Unit,
     onStart: () -> Unit,
@@ -206,6 +208,7 @@ fun SubjectSelectScreen(
         contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp),
     ) {
         item {
+            PageBackButton(onClick = onBack)
             Text("AI Quiz ✨",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = NovaGold, fontWeight = FontWeight.ExtraBold

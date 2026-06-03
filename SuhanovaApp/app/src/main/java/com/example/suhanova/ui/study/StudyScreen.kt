@@ -49,6 +49,7 @@ import com.example.suhanova.theme.TextMuted
 import com.example.suhanova.theme.TextPrimary
 import com.example.suhanova.theme.TextSecondary
 import com.example.suhanova.ui.components.GlassCard
+import com.example.suhanova.ui.components.PageBackButton
 import com.example.suhanova.ui.components.StarFieldCanvas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -96,7 +97,7 @@ Do not use generic canned content. Keep it specific to the user's topic.
 }
 
 @Composable
-fun StudyScreen(onNavigate: (String) -> Unit = {}) {
+fun StudyScreen(onNavigate: (String) -> Unit = {}, onBack: () -> Unit = {}) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
@@ -129,6 +130,7 @@ fun StudyScreen(onNavigate: (String) -> Unit = {}) {
                                 fontWeight = FontWeight.ExtraBold,
                             )
                         )
+                        PageBackButton(onClick = onBack)
                         Text(
                             "No preloaded flashcards or schedules. Tell Nova what you need now.",
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),

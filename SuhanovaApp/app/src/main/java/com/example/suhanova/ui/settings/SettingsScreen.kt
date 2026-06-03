@@ -32,7 +32,7 @@ import com.example.suhanova.ui.components.GlassCard
 import com.example.suhanova.ui.components.StarFieldCanvas
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onBack: () -> Unit = {}) {
     val ctx = LocalContext.current
     val prefs = remember { ctx.getSharedPreferences("suhanova_security", android.content.Context.MODE_PRIVATE) }
 
@@ -97,6 +97,9 @@ fun SettingsScreen() {
                     color = TextPrimary, fontWeight = FontWeight.ExtraBold,
                 )
             )
+            TextButton(onClick = onBack) {
+                Text("‹ Back", style = MaterialTheme.typography.labelMedium.copy(color = NovaGold, fontWeight = FontWeight.Bold))
+            }
             Text(
                 "Personalize your Suhanova experience",
                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),

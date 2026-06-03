@@ -54,7 +54,7 @@ val ranks = listOf(
 )
 
 @Composable
-fun RewardsScreen() {
+fun RewardsScreen(onBack: () -> Unit = {}) {
     var showLevelUp by remember { mutableStateOf(false) }
     val currentXP = 2840
     val nextXP    = 3500
@@ -79,6 +79,9 @@ fun RewardsScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp),
     ) {
+        item {
+            PageBackButton(onClick = onBack)
+        }
         item {
             Text("Nova Ranks 🏆",
                 style = MaterialTheme.typography.headlineMedium.copy(

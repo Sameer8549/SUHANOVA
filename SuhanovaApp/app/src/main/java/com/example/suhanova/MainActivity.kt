@@ -8,16 +8,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -27,8 +36,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.suhanova.notifications.createNotificationChannels
@@ -45,6 +62,7 @@ import com.example.suhanova.theme.TextPrimary
 import com.example.suhanova.theme.TextSecondary
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -109,11 +127,14 @@ fun SuhanovaApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val securityPrefs = remember { context.getSharedPreferences("suhanova_security", android.content.Context.MODE_PRIVATE) }
+    var startupDone by remember { mutableStateOf(false) }
     var onboardingComplete by remember { mutableStateOf(prefs.getBoolean("onboarding_complete", false)) }
     var biometricUnlocked by remember { mutableStateOf(false) }
     val biometricEnabled = securityPrefs.getBoolean("biometric_enabled", false)
 
-    if (onboardingComplete && biometricEnabled && !biometricUnlocked) {
+    if (!startupDone) {
+        PersonalizedStartup(onDone = { startupDone = true })
+    } else if (onboardingComplete && biometricEnabled && !biometricUnlocked) {
         BiometricGate(onUnlocked = { biometricUnlocked = true })
     } else if (onboardingComplete) {
         SuhanovaNavigation()
@@ -130,6 +151,125 @@ fun SuhanovaApp() {
                 .putBoolean("onboarding_complete", true)
                 .apply()
             onboardingComplete = true
+        }
+    }
+}
+
+@Composable
+private fun PersonalizedStartup(onDone: () -> Unit) {
+    val photos = remember {
+        listOf(
+            R.drawable.startup_suhana_1,
+            R.drawable.startup_suhana_2,
+            R.drawable.startup_suhana_3,
+            R.drawable.startup_suhana_4,
+            R.drawable.startup_suhana_5,
+        )
+    }
+    val lines = remember {
+        listOf(
+            "Some people become the reason an app has a heart.",
+            "Suhana, you matter in ways words always try to catch up to.",
+            "Every screen here was made to remind you: you are seen, believed in, and never alone.",
+            "Your smile, your dreams, your becoming... all of it matters to me.",
+            "Welcome back, Doctor Suhana."
+        )
+    }
+    var index by remember { mutableIntStateOf(0) }
+    val imageScale by animateFloatAsState(
+        targetValue = if (index % 2 == 0) 1.08f else 1.02f,
+        animationSpec = tween(1600),
+        label = "startupImageScale",
+    )
+    val textAlpha by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(800),
+        label = "startupTextAlpha",
+    )
+
+    LaunchedEffect(Unit) {
+        repeat(photos.size) { step ->
+            index = step
+            delay(1850)
+        }
+        delay(600)
+        onDone()
+    }
+
+    Box(Modifier.fillMaxSize().background(SpaceBlack)) {
+        Crossfade(targetState = photos[index], animationSpec = tween(700), label = "startupPhoto") { photo ->
+            Image(
+                painter = painterResource(photo),
+                contentDescription = "Suhanova startup memory",
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = imageScale
+                    scaleY = imageScale
+                },
+                contentScale = ContentScale.Crop,
+            )
+        }
+
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.Black.copy(alpha = 0.30f),
+                        Color.Black.copy(alpha = 0.10f),
+                        Color.Black.copy(alpha = 0.72f),
+                    )
+                )
+            )
+        )
+
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 34.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                photos.forEachIndexed { i, _ ->
+                    Box(
+                        Modifier.weight(1f).height(3.dp).clip(CircleShape)
+                            .background(if (i <= index) NovaGold else Color.White.copy(alpha = 0.28f))
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(72.dp).clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(NovaGold, Color(0xFFFF6EB4)))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("S", style = MaterialTheme.typography.headlineMedium.copy(color = SpaceBlack, fontWeight = FontWeight.ExtraBold))
+                }
+            }
+
+            Column(
+                Modifier.fillMaxWidth().graphicsLayer { alpha = textAlpha },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    lines[index],
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 32.sp,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    "Suhanova was not made like a normal app. It was made like a promise.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color.White.copy(alpha = 0.86f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 22.sp,
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -220,7 +360,7 @@ private fun FirstRunQuestions(onComplete: (FirstRunAnswers) -> Unit) {
     var dateError by remember { mutableStateOf("") }
 
     Column(
-        Modifier.fillMaxSize().background(SpaceBlack).padding(24.dp),
+        Modifier.fillMaxSize().background(SpaceBlack).verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
