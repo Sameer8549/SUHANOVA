@@ -54,6 +54,32 @@ val quickActions = listOf(
     Triple("📊", "Progress",      "progress"),
 )
 
+data class TimedQuote(val text: String, val author: String)
+
+private val morningQuotes = listOf(
+    TimedQuote("Your priorities are changed, but not the person.", "Unknown"),
+    TimedQuote("Win the morning quietly; the day will hear you.", "Unknown"),
+    TimedQuote("Small focus today becomes confidence tomorrow.", "Unknown"),
+)
+
+private val afternoonQuotes = listOf(
+    TimedQuote("Discipline is choosing the future over the mood.", "Unknown"),
+    TimedQuote("A tired mind still grows when it returns gently.", "Unknown"),
+    TimedQuote("Do the next honest hour. That is enough.", "Unknown"),
+)
+
+private val eveningQuotes = listOf(
+    TimedQuote("Progress is not loud. It is repeated.", "Unknown"),
+    TimedQuote("The person you are becoming is built after comfort ends.", "Unknown"),
+    TimedQuote("Review what matters; release what does not.", "Unknown"),
+)
+
+private val nightQuotes = listOf(
+    TimedQuote("Rest is not quitting. Rest is preparation.", "Unknown"),
+    TimedQuote("Even the strongest dreams need sleep to survive.", "Unknown"),
+    TimedQuote("You can begin again tomorrow without losing today.", "Unknown"),
+)
+
 @Composable
 fun HomeScreen(onNavigate: (String) -> Unit) {
     val ctx      = LocalContext.current
@@ -97,6 +123,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
     val examCountdown = remember(examDateMillis, nowMillis) {
         formatExamCountdown(examDateMillis, nowMillis)
     }
+    val timedQuote = remember(nowMillis) { quoteForTime(nowMillis) }
     val aiMsg = when {
         totalQuizzes == 0 && setupWeakAreas.isNotBlank() ->
             "Start with ${setupWeakAreas}. I will generate live questions from your exact topic."
@@ -160,6 +187,35 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             item {
                 AnimatedVisibility(visible, enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { 40 }) {
                     NovaMomentCard(greeting, aiMsg, examCountdown, streak)
+                }
+            }
+
+            item {
+                AnimatedVisibility(visible, enter = fadeIn(tween(450)) + slideInVertically(tween(450)) { 40 }) {
+                    GlassCard(glowColor = StellarPink) {
+                        Text(
+                            "REAL-TIME QUOTE",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = StellarPink,
+                                letterSpacing = 2.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "\"${timedQuote.text}\"",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = TextPrimary,
+                                fontStyle = FontStyle.Italic,
+                                lineHeight = 24.sp,
+                            )
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "- ${timedQuote.author}",
+                            style = MaterialTheme.typography.labelMedium.copy(color = TextMuted),
+                        )
+                    }
                 }
             }
 
@@ -356,4 +412,17 @@ private fun formatExamCountdown(examDateMillis: Long, nowMillis: Long): String {
     val minutes = (remainingSeconds % 3_600L) / 60L
     val seconds = remainingSeconds % 60L
     return "${days}d ${hours}h ${minutes}m ${seconds}s to NEET"
+}
+
+private fun quoteForTime(nowMillis: Long): TimedQuote {
+    val calendar = Calendar.getInstance().apply { timeInMillis = nowMillis }
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val minuteBucket = calendar.get(Calendar.MINUTE) / 10
+    val pool = when (hour) {
+        in 5..11 -> morningQuotes
+        in 12..16 -> afternoonQuotes
+        in 17..21 -> eveningQuotes
+        else -> nightQuotes
+    }
+    return pool[(hour + minuteBucket) % pool.size]
 }
