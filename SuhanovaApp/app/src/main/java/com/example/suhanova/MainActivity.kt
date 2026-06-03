@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,9 +108,14 @@ class MainActivity : ComponentActivity() {
 fun SuhanovaApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
+    val securityPrefs = remember { context.getSharedPreferences("suhanova_security", android.content.Context.MODE_PRIVATE) }
     var onboardingComplete by remember { mutableStateOf(prefs.getBoolean("onboarding_complete", false)) }
+    var biometricUnlocked by remember { mutableStateOf(false) }
+    val biometricEnabled = securityPrefs.getBoolean("biometric_enabled", false)
 
-    if (onboardingComplete) {
+    if (onboardingComplete && biometricEnabled && !biometricUnlocked) {
+        BiometricGate(onUnlocked = { biometricUnlocked = true })
+    } else if (onboardingComplete) {
         SuhanovaNavigation()
     } else {
         FirstRunQuestions {
@@ -121,6 +127,70 @@ fun SuhanovaApp() {
                 .putBoolean("onboarding_complete", true)
                 .apply()
             onboardingComplete = true
+        }
+    }
+}
+
+@Composable
+private fun BiometricGate(onUnlocked: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var status by remember { mutableStateOf("Unlock Suhanova to continue") }
+    var promptNonce by remember { mutableIntStateOf(0) }
+
+    fun showPrompt() {
+        val executor = ContextCompat.getMainExecutor(context)
+        val cancellation = android.os.CancellationSignal()
+        val prompt = android.hardware.biometrics.BiometricPrompt.Builder(context)
+            .setTitle("Unlock Suhanova")
+            .setSubtitle("Use biometric or device credential")
+            .setNegativeButton("Cancel", executor) { _, _ ->
+                status = "Authentication cancelled"
+            }
+            .build()
+
+        prompt.authenticate(
+            cancellation,
+            executor,
+            object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) {
+                    status = "Unlocked"
+                    onUnlocked()
+                }
+
+                override fun onAuthenticationFailed() {
+                    status = "Authentication failed. Try again."
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    status = errString.toString()
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(promptNonce) {
+        showPrompt()
+    }
+
+    Column(
+        Modifier.fillMaxSize().background(SpaceBlack).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            "Suhanova Locked",
+            style = MaterialTheme.typography.headlineMedium.copy(color = TextPrimary, fontWeight = FontWeight.ExtraBold),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(status, style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary))
+        Spacer(Modifier.height(22.dp))
+        Button(
+            onClick = { promptNonce++ },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(containerColor = NovaGold, contentColor = SpaceBlack),
+        ) {
+            Text("Unlock", fontWeight = FontWeight.Bold)
         }
     }
 }

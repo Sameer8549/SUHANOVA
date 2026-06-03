@@ -34,8 +34,9 @@ import com.example.suhanova.ui.components.StarFieldCanvas
 @Composable
 fun SettingsScreen() {
     val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("suhanova_security", android.content.Context.MODE_PRIVATE) }
 
-    var biometricEnabled by remember { mutableStateOf(false) }
+    var biometricEnabled by remember { mutableStateOf(prefs.getBoolean("biometric_enabled", false)) }
     var biometricStatus  by remember { mutableStateOf("") }
     var isTesting        by remember { mutableStateOf(false) }
 
@@ -62,6 +63,7 @@ fun SettingsScreen() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     biometricEnabled = true
+                    prefs.edit().putBoolean("biometric_enabled", true).apply()
                     biometricStatus  = "Biometric verified successfully!"
                     isTesting = false
                 }
@@ -132,7 +134,13 @@ fun SettingsScreen() {
                         Switch(
                             checked  = biometricEnabled,
                             onCheckedChange = {
-                                if (it && canUseBio) testBiometric() else { biometricEnabled = false; biometricStatus = "" }
+                                if (it && canUseBio) {
+                                    testBiometric()
+                                } else {
+                                    biometricEnabled = false
+                                    prefs.edit().putBoolean("biometric_enabled", false).apply()
+                                    biometricStatus = ""
+                                }
                             },
                             enabled = canUseBio,
                             colors  = SwitchDefaults.colors(
