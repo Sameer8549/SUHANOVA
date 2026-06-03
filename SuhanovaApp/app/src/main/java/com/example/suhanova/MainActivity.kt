@@ -121,6 +121,9 @@ fun SuhanovaApp() {
         FirstRunQuestions {
             prefs.edit()
                 .putString("goal", it.goal)
+                .putString("board", it.board)
+                .putString("student_class", it.studentClass)
+                .putString("target_exam", it.targetExam)
                 .putString("level", it.level)
                 .putString("weak_areas", it.weakAreas)
                 .putLong("exam_date_millis", it.examDateMillis)
@@ -197,6 +200,9 @@ private fun BiometricGate(onUnlocked: () -> Unit) {
 
 data class FirstRunAnswers(
     val goal: String,
+    val board: String,
+    val studentClass: String,
+    val targetExam: String,
     val level: String,
     val weakAreas: String,
     val examDateMillis: Long,
@@ -205,6 +211,9 @@ data class FirstRunAnswers(
 @Composable
 private fun FirstRunQuestions(onComplete: (FirstRunAnswers) -> Unit) {
     var goal by remember { mutableStateOf("") }
+    var board by remember { mutableStateOf("") }
+    var studentClass by remember { mutableStateOf("") }
+    var targetExam by remember { mutableStateOf("") }
     var level by remember { mutableStateOf("") }
     var weakAreas by remember { mutableStateOf("") }
     var examDate by remember { mutableStateOf("") }
@@ -220,14 +229,20 @@ private fun FirstRunQuestions(onComplete: (FirstRunAnswers) -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Answer these once so the app starts from your real needs, not pre-added demo data.",
+            "Answer these once so the app adapts to your class, board, exam, and real needs.",
             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
         )
         Spacer(Modifier.height(22.dp))
 
-        FirstRunInput(goal, { goal = it }, "What is your goal?", "Example: NEET 2026, Biology exam, improve Physics")
+        FirstRunInput(goal, { goal = it }, "What is your goal?", "Example: board exams, NEET, improve Maths")
         Spacer(Modifier.height(12.dp))
-        FirstRunInput(examDate, { examDate = it; dateError = "" }, "When is your NEET exam?", "YYYY-MM-DD, example: 2026-05-03")
+        FirstRunInput(board, { board = it }, "Which board?", "Example: CBSE, ICSE, State Board, ISC")
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(studentClass, { studentClass = it }, "Which class?", "Example: 10th, 11th, 12th, dropper")
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(targetExam, { targetExam = it }, "Which target exam?", "Example: Class 10 boards, Class 12 boards, NEET, school tests")
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(examDate, { examDate = it; dateError = "" }, "When is your exam?", "YYYY-MM-DD, example: 2026-03-05")
         if (dateError.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(dateError, style = MaterialTheme.typography.bodySmall.copy(color = NovaGold))
@@ -244,10 +259,10 @@ private fun FirstRunQuestions(onComplete: (FirstRunAnswers) -> Unit) {
                 if (millis == null) {
                     dateError = "Enter date like 2026-05-03"
                 } else {
-                    onComplete(FirstRunAnswers(goal, level, weakAreas, millis))
+                    onComplete(FirstRunAnswers(goal, board, studentClass, targetExam, level, weakAreas, millis))
                 }
             },
-            enabled = goal.isNotBlank() && examDate.isNotBlank(),
+            enabled = goal.isNotBlank() && board.isNotBlank() && studentClass.isNotBlank() && targetExam.isNotBlank() && examDate.isNotBlank(),
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = CircleShape,
             colors = ButtonDefaults.buttonColors(containerColor = NovaGold, contentColor = SpaceBlack),

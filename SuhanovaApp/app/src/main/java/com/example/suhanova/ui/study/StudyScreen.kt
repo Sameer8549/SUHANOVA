@@ -55,11 +55,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class LiveStudyRepository {
-    suspend fun generateStudySession(goal: String, level: String): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun generateStudySession(
+        goal: String,
+        level: String,
+        board: String,
+        studentClass: String,
+        targetExam: String,
+    ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val prompt = """
 Create a real-time study session for this learner.
 
+Board: $board
+Class: $studentClass
+Target exam: $targetExam
 Goal/topic: $goal
 Current level or need: $level
 
@@ -88,6 +97,8 @@ Do not use generic canned content. Keep it specific to the user's topic.
 
 @Composable
 fun StudyScreen(onNavigate: (String) -> Unit = {}) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
     val repository = remember { LiveStudyRepository() }
 
@@ -147,7 +158,13 @@ fun StudyScreen(onNavigate: (String) -> Unit = {}) {
                                 error = ""
                                 output = ""
                                 scope.launch {
-                                    repository.generateStudySession(topic, level).fold(
+                                    repository.generateStudySession(
+                                        goal = topic,
+                                        level = level,
+                                        board = setupPrefs.getString("board", "").orEmpty(),
+                                        studentClass = setupPrefs.getString("student_class", "").orEmpty(),
+                                        targetExam = setupPrefs.getString("target_exam", "").orEmpty(),
+                                    ).fold(
                                         onSuccess = { output = it.ifBlank { "Nova returned an empty response. Try a more specific topic." } },
                                         onFailure = { error = it.message ?: "AI study generation failed. Please try again." },
                                     )

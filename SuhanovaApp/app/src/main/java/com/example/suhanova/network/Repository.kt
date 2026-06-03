@@ -51,9 +51,12 @@ class QuizRepository {
         topic: String,
         difficulty: String = "Mixed",
         count: Int = 5,
+        board: String? = null,
+        studentClass: String? = null,
+        targetExam: String? = null,
     ): Result<List<GeneratedQuestion>> = withContext(Dispatchers.IO) {
         try {
-            val prompt = buildMcqPrompt(subject, topic, difficulty, count)
+            val prompt = buildMcqPrompt(subject, topic, difficulty, count, board, studentClass, targetExam)
 
             val response = MistralClient.service.generate(
                 request = MistralRequest(

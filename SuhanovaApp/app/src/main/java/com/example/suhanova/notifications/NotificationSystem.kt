@@ -42,7 +42,7 @@ fun createNotificationChannels(context: Context) {
                 lightColor = android.graphics.Color.parseColor("#FF6EB4")
             },
             NotificationChannel(CHANNEL_QUIZ, "Daily Quiz", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "Today's NEET practice questions are ready"
+                description = "Daily practice questions for the selected exam"
             },
             NotificationChannel(CHANNEL_MIDNIGHT, "Midnight Check-in", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Late-night study companion"
@@ -86,6 +86,9 @@ fun sendNovaNotification(
 
 data class NotificationContext(
     val goal: String,
+    val board: String,
+    val studentClass: String,
+    val targetExam: String,
     val weakAreas: String,
     val streak: Int,
     val totalXP: Int,
@@ -116,6 +119,9 @@ private suspend fun loadNotificationContext(context: Context): NotificationConte
 
     return NotificationContext(
         goal = prefs.getString("goal", "").orEmpty(),
+        board = prefs.getString("board", "").orEmpty(),
+        studentClass = prefs.getString("student_class", "").orEmpty(),
+        targetExam = prefs.getString("target_exam", "").orEmpty(),
         weakAreas = prefs.getString("weak_areas", "").orEmpty(),
         streak = profile?.currentStreak ?: 0,
         totalXP = profile?.totalXP ?: 0,
@@ -128,9 +134,9 @@ private suspend fun loadNotificationContext(context: Context): NotificationConte
 
 private fun morningMessage(ctx: NotificationContext): String = when {
     ctx.weakAreas.isNotBlank() ->
-        "Good morning. Start with ${ctx.weakAreas}; Nova can generate a live study plan or quiz from it."
+        "Good morning. Start with ${ctx.weakAreas}; Nova can generate a ${ctx.studentClass} ${ctx.board} plan or quiz from it."
     ctx.goal.isNotBlank() ->
-        "Good morning. Your goal is ${ctx.goal}. Open Nova and choose today's exact topic."
+        "Good morning. Your goal is ${ctx.goal} for ${ctx.targetExam}. Open Nova and choose today's exact topic."
     else ->
         "Good morning. Tell Nova your goal and weak area so today's plan is based on you."
 }
@@ -155,7 +161,7 @@ private fun quizMessage(ctx: NotificationContext): String = when {
     ctx.latestQuizTopic != null && (ctx.latestQuizAccuracy ?: 100) < 70 ->
         "Your last ${ctx.latestQuizSubject} quiz on ${ctx.latestQuizTopic} was ${ctx.latestQuizAccuracy}%. Regenerate a live practice quiz for that topic."
     ctx.weakAreas.isNotBlank() ->
-        "Quiz time. Use your weak area (${ctx.weakAreas}) and Nova will generate fresh questions now."
+        "Quiz time. Use your weak area (${ctx.weakAreas}) and Nova will generate fresh ${ctx.board} ${ctx.studentClass} questions now."
     ctx.latestQuizTopic != null ->
         "Build on your last topic: ${ctx.latestQuizTopic}. Generate a fresh live quiz when you open the app."
     else ->

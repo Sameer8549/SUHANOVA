@@ -54,12 +54,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class RoadmapAIRepository {
-    suspend fun generatePersonalizedRoadmap(goal: String, currentLevel: String, weakAreas: String): Result<String> =
+    suspend fun generatePersonalizedRoadmap(
+        goal: String,
+        currentLevel: String,
+        weakAreas: String,
+        board: String,
+        studentClass: String,
+        targetExam: String,
+    ): Result<String> =
         withContext(Dispatchers.IO) {
             try {
                 val prompt = """
 Create a personalized real-time learning roadmap.
 
+Board: $board
+Class: $studentClass
+Target exam: $targetExam
 Goal/exam: $goal
 Current level: $currentLevel
 Weak areas or confusion: $weakAreas
@@ -90,6 +100,8 @@ Do not assume completed chapters, scores, streaks, or old progress. Use only the
 
 @Composable
 fun RoadmapScreen() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val repository = remember { RoadmapAIRepository() }
     val scope = rememberCoroutineScope()
 
@@ -142,7 +154,14 @@ fun RoadmapScreen() {
                                 error = ""
                                 plan = ""
                                 scope.launch {
-                                    repository.generatePersonalizedRoadmap(goal, level, weakAreas).fold(
+                                    repository.generatePersonalizedRoadmap(
+                                        goal = goal,
+                                        currentLevel = level,
+                                        weakAreas = weakAreas,
+                                        board = setupPrefs.getString("board", "").orEmpty(),
+                                        studentClass = setupPrefs.getString("student_class", "").orEmpty(),
+                                        targetExam = setupPrefs.getString("target_exam", "").orEmpty(),
+                                    ).fold(
                                         onSuccess = { plan = it.ifBlank { "Nova returned an empty roadmap. Add more detail and try again." } },
                                         onFailure = { error = it.message ?: "AI roadmap generation failed. Please try again." },
                                     )

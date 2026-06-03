@@ -36,6 +36,7 @@ fun ProgressScreen() {
     val db  = remember { SuhanovaDatabase.getDatabase(ctx) }
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val examDateMillis = remember { setupPrefs.getLong("exam_date_millis", 0L) }
+    val targetExam = remember { setupPrefs.getString("target_exam", "Exam") ?: "Exam" }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(examDateMillis) {
@@ -145,7 +146,7 @@ fun ProgressScreen() {
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("NEET READINESS SCORE", style = MaterialTheme.typography.labelSmall.copy(color = NovaGold, letterSpacing = 2.sp))
+                        Text("${targetExam.uppercase()} READINESS SCORE", style = MaterialTheme.typography.labelSmall.copy(color = NovaGold, letterSpacing = 2.sp))
                         ReadinessRing(readinessScore)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Chip("$totalQuizzes quizzes done", BioGreen)

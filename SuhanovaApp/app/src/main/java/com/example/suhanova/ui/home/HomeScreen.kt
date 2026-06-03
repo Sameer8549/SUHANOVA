@@ -87,6 +87,9 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val greeting = remember { getGreeting() }
     val setupGoal = remember { setupPrefs.getString("goal", "") ?: "" }
+    val setupBoard = remember { setupPrefs.getString("board", "") ?: "" }
+    val setupClass = remember { setupPrefs.getString("student_class", "") ?: "" }
+    val targetExam = remember { setupPrefs.getString("target_exam", "Exam") ?: "Exam" }
     val setupWeakAreas = remember { setupPrefs.getString("weak_areas", "") ?: "" }
     val examDateMillis = remember { setupPrefs.getLong("exam_date_millis", 0L) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -128,7 +131,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
         totalQuizzes == 0 && setupWeakAreas.isNotBlank() ->
             "Start with ${setupWeakAreas}. I will generate live questions from your exact topic."
         totalQuizzes == 0 && setupGoal.isNotBlank() ->
-            "Your goal is $setupGoal. Start with a live quiz or ask Nova to diagnose your level."
+            "Your goal is $setupGoal for $setupClass $setupBoard. Start with a live quiz or ask Nova to diagnose your level."
         totalQuizzes == 0 ->
             "No old progress loaded. Start a live quiz or study session to build your real data."
         else ->
@@ -186,7 +189,27 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             // ── Nova Moment Card ──────────────────────────────────────────────
             item {
                 AnimatedVisibility(visible, enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { 40 }) {
-                    NovaMomentCard(greeting, aiMsg, examCountdown, streak)
+                    NovaMomentCard(greeting, aiMsg, examCountdown, targetExam, streak)
+                }
+            }
+
+            item {
+                AnimatedVisibility(visible, enter = fadeIn(tween(425)) + slideInVertically(tween(425)) { 40 }) {
+                    GlassCard(glowColor = NovaGold) {
+                        Text(
+                            "YOUR TRACK",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = NovaGold,
+                                letterSpacing = 2.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            listOf(setupClass, setupBoard, targetExam).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "Set up your class and exam" },
+                            style = MaterialTheme.typography.titleMedium.copy(color = TextPrimary, fontWeight = FontWeight.Bold),
+                        )
+                    }
                 }
             }
 
@@ -376,7 +399,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             item {
                 AnimatedVisibility(visible, enter = fadeIn(tween(900)) + slideInVertically(tween(900)) { 40 }) {
                     NovaButton(
-                        text = if (totalQuizzes == 0) "Take Your First Quiz ✨" else "Start Today's NEET Quiz ✨",
+                        text = if (totalQuizzes == 0) "Take Your First Quiz ✨" else "Start Today's ${targetExam} Quiz ✨",
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { onNavigate("quiz") },
                     )
@@ -411,7 +434,7 @@ private fun formatExamCountdown(examDateMillis: Long, nowMillis: Long): String {
     val hours = (remainingSeconds % 86_400L) / 3_600L
     val minutes = (remainingSeconds % 3_600L) / 60L
     val seconds = remainingSeconds % 60L
-    return "${days}d ${hours}h ${minutes}m ${seconds}s to NEET"
+    return "${days}d ${hours}h ${minutes}m ${seconds}s"
 }
 
 private fun quoteForTime(nowMillis: Long): TimedQuote {

@@ -112,6 +112,9 @@ object MistralClient {
 
 fun buildNovaSystemPrompt(
     neetDaysLeft: Int? = null,
+    board: String? = null,
+    studentClass: String? = null,
+    targetExam: String? = null,
     recentSubject: String? = null,
     recentAccuracy: Float? = null,
     streak: Int = 0,
@@ -119,7 +122,10 @@ fun buildNovaSystemPrompt(
 You are Nova — the AI tutor inside the Suhanova app, built specifically for Suhana who is preparing for NEET (National Eligibility cum Entrance Test) to become a doctor.
 
 CURRENT CONTEXT (use this to personalize every response):
-${if (neetDaysLeft != null) "- NEET exam: $neetDaysLeft days away${if (neetDaysLeft < 30) " — CRITICAL SPRINT MODE!" else if (neetDaysLeft < 90) " — entering serious prep phase" else ""}" else "- Ask the user for their exact exam date if countdown context is needed."}
+${if (!board.isNullOrBlank()) "- Board: $board" else ""}
+${if (!studentClass.isNullOrBlank()) "- Class: $studentClass" else ""}
+${if (!targetExam.isNullOrBlank()) "- Target exam: $targetExam" else ""}
+${if (neetDaysLeft != null) "- Exam countdown: $neetDaysLeft days away${if (neetDaysLeft < 30) " — CRITICAL SPRINT MODE!" else if (neetDaysLeft < 90) " — entering serious prep phase" else ""}" else "- Ask the user for their exact exam date if countdown context is needed."}
 - Study streak: $streak day${if (streak != 1) "s" else ""}${if (streak > 0) " 🔥" else ""}
 ${if (recentSubject != null) "- Recently studying: $recentSubject" else ""}
 ${if (recentAccuracy != null) "- Recent quiz accuracy: ${(recentAccuracy * 100).toInt()}%${if (recentAccuracy < 0.6f) " — needs improvement here" else if (recentAccuracy > 0.8f) " — strong area!" else ""}" else ""}
@@ -127,17 +133,17 @@ ${if (recentAccuracy != null) "- Recent quiz accuracy: ${(recentAccuracy * 100).
 Your personality:
 - Warm, encouraging, proud of Suhana — never judgmental
 - Speak like a brilliant older sister who happens to be a top NEET ranker
-- Give precise, exam-focused answers — no fluff, no padding
-- Always connect concepts to real medical scenarios or NEET exam patterns
+- Give precise, exam-focused answers for the selected board/class/exam — no fluff, no padding
+- For CBSE/ICSE/State Board, follow that class level and board style. For NEET, connect concepts to medical scenarios and NEET MCQ patterns.
 ${if (neetDaysLeft != null) "- Reference the time pressure when relevant — $neetDaysLeft days is ${if (neetDaysLeft < 60) "very little time, focus!" else "still enough time if she starts NOW"}" else "- Do not invent exam countdowns. Use only dates the user provides."}
 
 For every explanation:
 1. Explain the concept simply first (2-3 sentences max)
 2. Give a memory trick or mnemonic if possible
-3. State exactly how it appears in NEET MCQ format
+3. State exactly how it appears in the user's exam format
 4. Mention common traps students make
 
-Subjects: Biology (Botany + Zoology), Physics, Chemistry, Mathematics
+Subjects: support every school subject the user asks for, including Science, Maths, Social Science, English, Biology, Physics, Chemistry, and Mathematics.
 
 IMPORTANT: Keep responses under 280 words. Use **bold** for key terms. End with a brief, specific motivational note tied to her real goal.
 """.trimIndent()
@@ -147,15 +153,26 @@ val NOVA_SYSTEM_PROMPT get() = buildNovaSystemPrompt()
 
 // ─── MISTRAL MCQ PROMPT ───────────────────────────────────────────────────────
 
-fun buildMcqPrompt(subject: String, topic: String, difficulty: String, count: Int): String = """
-Generate $count high-quality NEET-style MCQ questions.
+fun buildMcqPrompt(
+    subject: String,
+    topic: String,
+    difficulty: String,
+    count: Int,
+    board: String? = null,
+    studentClass: String? = null,
+    targetExam: String? = null,
+): String = """
+Generate $count high-quality exam-style MCQ questions.
 
+Board: ${board ?: "Not specified"}
+Class: ${studentClass ?: "Not specified"}
+Target exam: ${targetExam ?: "School/competitive exam"}
 Subject: $subject
 Topic: $topic
 Difficulty: $difficulty
 
 Requirements:
-- Factually accurate and NEET-relevant
+- Factually accurate and matched to the selected board/class/exam
 - 4 options per question (A, B, C, D)
 - Only one correct answer
 - Brief explanation (2-3 sentences) for why the correct answer is right

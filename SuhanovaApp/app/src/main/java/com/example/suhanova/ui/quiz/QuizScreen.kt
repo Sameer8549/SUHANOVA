@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.suhanova.data.SuhanovaDatabase
 import com.example.suhanova.network.*
 import com.example.suhanova.theme.*
 import com.example.suhanova.ui.components.*
@@ -28,14 +31,24 @@ import kotlinx.coroutines.launch
 
 // Quiz subjects the user can pick from
 val QUIZ_SUBJECTS = listOf(
+    Triple("Science",   "🔬", BioGreen),
+    Triple("Maths",     "📐", MathGold),
+    Triple("English",   "📘", PhysBlue),
+    Triple("Social Science", "🌍", NovaGold),
     Triple("Biology",   "🧬", BioGreen),
     Triple("Physics",   "⚡", PhysBlue),
     Triple("Chemistry", "🧪", ChemRed),
+    Triple("Computer",  "💻", StellarPink),
     Triple("Mixed",     "✨", NovaGold),
 )
 
 @Composable
 fun QuizScreen(onNavigate: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val db = remember { SuhanovaDatabase.getDatabase(ctx) }
+    val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
+    val setupBoard = remember { setupPrefs.getString("board", "").orEmpty() }
+    val setupClass = remember { setupPrefs.getString("student_class", "").orEmpty() }
     val repository = remember { QuizRepository() }
     val scope      = rememberCoroutineScope()
 
@@ -53,6 +66,8 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
     var showExplanation by remember { mutableStateOf(false) }
     var score          by remember { mutableStateOf(Triple(0, 0, 0)) } // correct, wrong, skipped
     var timeLeft       by remember { mutableIntStateOf(60) }
+    val catalogSubjects by db.educationCatalogDao().getSubjects(setupBoard, setupClass).collectAsStateWithLifecycle(emptyList())
+    val catalogChapters by db.educationCatalogDao().getChapters(setupBoard, setupClass, selectedSubject).collectAsStateWithLifecycle(emptyList())
 
     when (screen) {
         "subject_select" -> {
@@ -61,6 +76,8 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
                 loadError     = loadError,
                 selectedSubject = selectedSubject,
                 selectedTopic   = selectedTopic,
+                catalogSubjects = catalogSubjects,
+                catalogChapters = catalogChapters,
                 onSubjectSelect = { selectedSubject = it },
                 onTopicSelect   = { selectedTopic = it },
                 onStart = {
@@ -72,6 +89,9 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
                             topic      = selectedTopic,
                             difficulty = "Mixed",
                             count      = 5,
+                            board      = setupBoard,
+                            studentClass = setupClass,
+                            targetExam = setupPrefs.getString("target_exam", ""),
                         )
                         result.fold(
                             onSuccess = { qs ->
@@ -174,6 +194,8 @@ fun SubjectSelectScreen(
     loadError: String,
     selectedSubject: String,
     selectedTopic: String,
+    catalogSubjects: List<String>,
+    catalogChapters: List<String>,
     onSubjectSelect: (String) -> Unit,
     onTopicSelect: (String) -> Unit,
     onStart: () -> Unit,
@@ -201,7 +223,12 @@ fun SubjectSelectScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                QUIZ_SUBJECTS.forEach { (name, emoji, color) ->
+                val subjects = if (catalogSubjects.isNotEmpty()) {
+                    catalogSubjects.map { Triple(it, subjectEmoji(it), subjectColor(it)) }
+                } else {
+                    QUIZ_SUBJECTS
+                }
+                subjects.forEach { (name, emoji, color) ->
                     val selected = selectedSubject == name
                     Column(
                         modifier = Modifier
@@ -253,6 +280,28 @@ fun SubjectSelectScreen(
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true,
             )
+            if (catalogChapters.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    catalogChapters.take(10).forEach { chapter ->
+                        val selected = selectedTopic == chapter
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selected) NovaGold.copy(alpha = 0.15f) else GlassBg)
+                                .border(1.dp, if (selected) NovaGold else GlassBorder, RoundedCornerShape(12.dp))
+                                .clickable { onTopicSelect(chapter) }
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(chapter, style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary))
+                            if (selected) Text("✓", color = NovaGold)
+                        }
+                    }
+                }
+            }
         }
 
         item {
@@ -285,6 +334,27 @@ fun SubjectSelectScreen(
             }
         }
     }
+}
+
+private fun subjectEmoji(subject: String): String = when {
+    subject.contains("bio", true) -> "🧬"
+    subject.contains("physics", true) -> "⚡"
+    subject.contains("chem", true) -> "🧪"
+    subject.contains("math", true) -> "📐"
+    subject.contains("english", true) -> "📘"
+    subject.contains("social", true) -> "🌍"
+    subject.contains("computer", true) -> "💻"
+    subject.contains("science", true) -> "🔬"
+    else -> "✨"
+}
+
+private fun subjectColor(subject: String): Color = when {
+    subject.contains("bio", true) || subject.contains("science", true) -> BioGreen
+    subject.contains("physics", true) || subject.contains("english", true) -> PhysBlue
+    subject.contains("chem", true) -> ChemRed
+    subject.contains("math", true) -> MathGold
+    subject.contains("social", true) -> NovaGold
+    else -> StellarPink
 }
 
 // ─── ACTIVE QUIZ ──────────────────────────────────────────────────────────────
