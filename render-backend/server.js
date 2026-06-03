@@ -7,6 +7,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile";
+const MISTRAL_DEFAULT_MODEL = "mistral-small-latest";
 
 const app = express();
 
@@ -174,11 +175,10 @@ app.post("/api/groq", async (req, res) => {
     return res.status(503).json({ error: "GROQ_API_KEY is not configured on the backend" });
   }
 
-  const requestedModel = req.body.model;
-  const groqModel =
-    !requestedModel || requestedModel === "llama3-70b-8192"
-      ? GROQ_DEFAULT_MODEL
-      : requestedModel;
+  const messages = normalizeMessages(req.body.messages);
+  if (messages.length === 0) {
+    return res.status(400).json({ error: "messages must contain at least one chat message" });
+  }
 
   const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -187,10 +187,10 @@ app.post("/api/groq", async (req, res) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: groqModel,
-      messages: req.body.messages,
-      max_tokens: req.body.max_tokens ?? 600,
-      temperature: req.body.temperature ?? 0.7,
+      model: GROQ_DEFAULT_MODEL,
+      messages,
+      max_tokens: normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 600),
+      temperature: normalizeNumber(req.body.temperature, 0.7),
       stream: false,
     }),
   });
@@ -203,6 +203,11 @@ app.post("/api/mistral", async (req, res) => {
     return res.status(503).json({ error: "MISTRAL_API_KEY is not configured on the backend" });
   }
 
+  const messages = normalizeMessages(req.body.messages);
+  if (messages.length === 0) {
+    return res.status(400).json({ error: "messages must contain at least one chat message" });
+  }
+
   const upstream = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -210,15 +215,30 @@ app.post("/api/mistral", async (req, res) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: req.body.model || "mistral-small-latest",
-      messages: req.body.messages,
-      max_tokens: req.body.max_tokens ?? 1500,
-      temperature: req.body.temperature ?? 0.3,
+      model: MISTRAL_DEFAULT_MODEL,
+      messages,
+      max_tokens: normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 1500),
+      temperature: normalizeNumber(req.body.temperature, 0.3),
     }),
   });
 
   res.status(upstream.status).json(await upstream.json());
 });
+
+function normalizeMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .map((message) => ({
+      role: String(message.role || "user").trim() || "user",
+      content: String(message.content || "").trim(),
+    }))
+    .filter((message) => message.content);
+}
+
+function normalizeNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
 
 app.use((err, _req, res, _next) => {
   console.error(err);
