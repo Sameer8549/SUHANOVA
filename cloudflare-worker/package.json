@@ -1,0 +1,12 @@
+{
+  "name": "suhanova-ai-worker",
+  "version": "1.0.0",
+  "description": "Suhanova AI Gateway — Cloudflare Worker proxy for Groq + Mistral",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.97.0"
+  }
+}

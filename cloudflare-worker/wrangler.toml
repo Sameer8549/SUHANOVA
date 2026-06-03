@@ -1,0 +1,4 @@
+name = "suhanova-ai"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+account_id = "8eb16381a30941714f4c727717685c4f"
