@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 // ─── RENDER AI GATEWAY ────────────────────────────────────────────────────────
 // AI provider keys live on the backend. The APK only talks to Render.
 
-const val AI_GATEWAY_BASE_URL = SKILLIQ_BACKEND_BASE_URL
+const val AI_GATEWAY_BASE_URL = SUHANOVA_BACKEND_BASE_URL
 
 // ─── SHARED DATA MODELS ───────────────────────────────────────────────────────
 

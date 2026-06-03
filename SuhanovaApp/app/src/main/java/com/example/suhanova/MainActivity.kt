@@ -11,7 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -176,33 +180,51 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
     }
     val lines = remember {
         listOf(
-            "Some people become the reason an app has a heart.",
-            "Suhana, you matter in ways words always try to catch up to.",
-            "Every screen here was made to remind you: you are seen, believed in, and never alone.",
-            "Your smile, your dreams, your becoming... all of it matters to me.",
-            "Welcome back, Doctor Suhana."
+            "Suhana, you are the soft reason this app has a heartbeat.",
+            "You matter quietly, deeply, and more than any screen can ever fully say.",
+            "Every sunrise inside Suhanova is a small reminder: your dreams are worth protecting.",
+            "Your smile changes the whole room; your becoming changes the whole story.",
+            "Welcome back, Doctor Suhana. The world is lucky you are here."
         )
     }
     var index by remember { mutableIntStateOf(0) }
+    val infiniteTransition = rememberInfiniteTransition(label = "startup3D")
+    val floatDepth by infiniteTransition.animateFloat(
+        initialValue = -18f,
+        targetValue = 18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1700),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "startupFloatDepth",
+    )
+    val lightSweep by infiniteTransition.animateFloat(
+        initialValue = -420f,
+        targetValue = 420f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2300),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "startupLightSweep",
+    )
+    val greetingPulse by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "startupGreetingPulse",
+    )
     val imageScale by animateFloatAsState(
-        targetValue = if (index % 2 == 0) 1.13f else 1.06f,
+        targetValue = if (index % 2 == 0) 1.10f else 1.04f,
         animationSpec = tween(1800),
         label = "startupImageScale",
     )
     val imageRotation by animateFloatAsState(
-        targetValue = if (index % 2 == 0) -1.8f else 1.6f,
+        targetValue = if (index % 2 == 0) -3.4f else 3.1f,
         animationSpec = tween(1800),
         label = "startupImageRotation",
-    )
-    val logoTilt by animateFloatAsState(
-        targetValue = if (index % 2 == 0) -8f else -2f,
-        animationSpec = tween(900),
-        label = "startupLogoTilt",
-    )
-    val logoAlpha by animateFloatAsState(
-        targetValue = 0.94f,
-        animationSpec = tween(600),
-        label = "startupLogoAlpha",
     )
 
     LaunchedEffect(Unit) {
@@ -214,27 +236,99 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
         onDone()
     }
 
-    Box(Modifier.fillMaxSize().background(SpaceBlack)) {
-        Crossfade(targetState = photos[index], animationSpec = tween(700), label = "startupPhoto") { photo ->
-            Image(
-                painter = painterResource(photo),
-                contentDescription = "Suhanova startup memory",
-                modifier = Modifier.fillMaxSize().graphicsLayer {
-                    scaleX = imageScale
-                    scaleY = imageScale
-                    rotationZ = imageRotation
-                    translationX = if (index % 2 == 0) -28f else 28f
-                    translationY = if (index % 2 == 0) 18f else -18f
-                },
-                contentScale = ContentScale.Crop,
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF06050A),
+                        Color(0xFF181022),
+                        Color(0xFF050409),
+                    )
+                )
             )
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    listOf(
+                        Color(0xFFFF4F9A).copy(alpha = 0.28f),
+                        Color(0xFFFFD76A).copy(alpha = 0.12f),
+                        Color.Transparent,
+                    )
+                )
+            )
+        )
+
+        Crossfade(targetState = photos[index], animationSpec = tween(700), label = "startupPhoto") { photo ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 76.dp)
+                    .graphicsLayer {
+                        rotationZ = imageRotation
+                        rotationX = if (index % 2 == 0) 5f else -5f
+                        rotationY = if (index % 2 == 0) -7f else 7f
+                        cameraDistance = 18f * density
+                        translationY = floatDepth
+                        shadowElevation = 28f
+                    }
+            ) {
+                Image(
+                    painter = painterResource(photo),
+                    contentDescription = "Suhanova startup memory",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(28.dp))
+                        .graphicsLayer {
+                            scaleX = imageScale
+                            scaleY = imageScale
+                        },
+                    contentScale = ContentScale.Crop,
+                )
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.06f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.40f),
+                                )
+                            )
+                        )
+                )
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(28.dp))
+                        .graphicsLayer {
+                            translationX = lightSweep
+                            rotationZ = 18f
+                            alpha = 0.42f
+                        }
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.Transparent,
+                                )
+                            )
+                        )
+                )
+            }
         }
 
         Box(
             Modifier.fillMaxSize().background(
                 Brush.radialGradient(
                     listOf(
-                        NovaGold.copy(alpha = 0.16f),
+                        NovaGold.copy(alpha = 0.24f),
+                        Color(0xFFFF5E93).copy(alpha = 0.10f),
                         Color.Transparent,
                     )
                 )
@@ -245,9 +339,9 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
                     listOf(
-                        Color.Black.copy(alpha = 0.30f),
-                        Color.Black.copy(alpha = 0.10f),
-                        Color.Black.copy(alpha = 0.72f),
+                        Color.Black.copy(alpha = 0.44f),
+                        Color.Black.copy(alpha = 0.03f),
+                        Color.Black.copy(alpha = 0.82f),
                     )
                 )
             )
@@ -262,26 +356,23 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
                 photos.forEachIndexed { i, _ ->
                     Box(
                         Modifier.weight(1f).height(3.dp).clip(CircleShape)
-                            .background(if (i <= index) NovaGold else Color.White.copy(alpha = 0.28f))
+                            .background(
+                                if (i <= index) {
+                                    Brush.horizontalGradient(listOf(Color(0xFFFFD76A), Color(0xFFFF4F9A)))
+                                } else {
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.24f),
+                                            Color.White.copy(alpha = 0.14f),
+                                        )
+                                    )
+                                }
+                            )
                     )
                 }
             }
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                Image(
-                    painter = painterResource(R.drawable.startup_logo),
-                    contentDescription = "Suhanova logo",
-                    modifier = Modifier
-                        .size(86.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .graphicsLayer {
-                            alpha = logoAlpha
-                            rotationZ = logoTilt
-                            shadowElevation = 18f
-                        },
-                    contentScale = ContentScale.Crop,
-                )
-            }
+            Spacer(Modifier.height(1.dp))
 
             Column(
                 Modifier.fillMaxWidth(),
@@ -298,24 +389,49 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
                 ) { textIndex ->
                     Column(
                         Modifier.fillMaxWidth().graphicsLayer {
-                            scaleX = 1.02f
-                            scaleY = 1.02f
+                            scaleX = greetingPulse
+                            scaleY = greetingPulse
+                            rotationX = 7f
+                            cameraDistance = 14f * density
                         },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(
+                            "FOR YOU",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = Color(0xFFFFD76A),
+                                fontWeight = FontWeight.Black,
+                                textAlign = TextAlign.Center,
+                            ),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.graphicsLayer {
+                                shadowElevation = 18f
+                                translationY = -4f
+                            },
+                        )
+                        Text(
                             lines[textIndex],
                             style = MaterialTheme.typography.headlineSmall.copy(
-                                color = Color.White,
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color.White,
+                                        Color(0xFFFFD76A),
+                                        Color(0xFFFF5E93),
+                                    )
+                                ),
                                 fontWeight = FontWeight.ExtraBold,
                                 textAlign = TextAlign.Center,
                                 lineHeight = 32.sp,
                             ),
                             textAlign = TextAlign.Center,
+                            modifier = Modifier.graphicsLayer {
+                                shadowElevation = 24f
+                                translationY = -floatDepth / 4f
+                            },
                         )
                         Text(
-                            "Suhanova was not made like a normal app. It was made like a promise.",
+                            "This is not just an opening screen. It is a little celebration of you, every time.",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = Color.White.copy(alpha = 0.88f),
                                 textAlign = TextAlign.Center,

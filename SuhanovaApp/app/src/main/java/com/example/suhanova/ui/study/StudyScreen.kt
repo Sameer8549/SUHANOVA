@@ -37,9 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.suhanova.network.GroqClient
-import com.example.suhanova.network.GroqMessage
-import com.example.suhanova.network.GroqRequest
+import com.example.suhanova.network.BackendClient
+import com.example.suhanova.network.SuhanovaAIRequest
 import com.example.suhanova.theme.GlassBg
 import com.example.suhanova.theme.GlassBorder
 import com.example.suhanova.theme.NovaGold
@@ -55,45 +54,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class LiveStudyRepository {
+class LiveStudyRepository(private val backendClient: BackendClient) {
     suspend fun generateStudySession(
         goal: String,
         level: String,
         board: String,
         studentClass: String,
         targetExam: String,
-    ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val prompt = """
-Create a real-time study session for this learner.
-
-Board: $board
-Class: $studentClass
-Target exam: $targetExam
-Goal/topic: $goal
-Current level or need: $level
-
-Return:
-1. Three diagnostic questions to ask before studying
-2. A focused 45-minute study plan
-3. Five flashcards generated for this topic only
-4. One quick practice task
-
-Do not use generic canned content. Keep it specific to the user's topic.
-""".trimIndent()
-
-            val response = GroqClient.service.chat(
-                GroqRequest(
-                    messages = listOf(GroqMessage("user", prompt)),
-                    maxTokens = 900,
-                    temperature = 0.65f,
-                )
-            )
-            Result.success(response.choices.firstOrNull()?.message?.content.orEmpty())
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
+    ): Result<String> = backendClient.studyPlan(
+        SuhanovaAIRequest(
+            board = board,
+            studentClass = studentClass,
+            targetExam = targetExam,
+            topic = goal,
+            level = level,
+            weakAreas = level,
+            maxTokens = 900,
+        )
+    )
 }
 
 @Composable
@@ -101,7 +79,7 @@ fun StudyScreen(onNavigate: (String) -> Unit = {}, onBack: () -> Unit = {}) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
-    val repository = remember { LiveStudyRepository() }
+    val repository = remember { LiveStudyRepository(BackendClient(ctx)) }
 
     var topic by remember { mutableStateOf("") }
     var level by remember { mutableStateOf("") }

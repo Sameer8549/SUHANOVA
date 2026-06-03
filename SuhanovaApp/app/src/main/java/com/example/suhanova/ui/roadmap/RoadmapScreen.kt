@@ -36,9 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.suhanova.network.GroqClient
-import com.example.suhanova.network.GroqMessage
-import com.example.suhanova.network.GroqRequest
+import com.example.suhanova.network.BackendClient
+import com.example.suhanova.network.SuhanovaAIRequest
 import com.example.suhanova.theme.GlassBg
 import com.example.suhanova.theme.GlassBorder
 import com.example.suhanova.theme.NovaGold
@@ -54,7 +53,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class RoadmapAIRepository {
+class RoadmapAIRepository(private val backendClient: BackendClient) {
     suspend fun generatePersonalizedRoadmap(
         goal: String,
         currentLevel: String,
@@ -62,48 +61,24 @@ class RoadmapAIRepository {
         board: String,
         studentClass: String,
         targetExam: String,
-    ): Result<String> =
-        withContext(Dispatchers.IO) {
-            try {
-                val prompt = """
-Create a personalized real-time learning roadmap.
-
-Board: $board
-Class: $studentClass
-Target exam: $targetExam
-Goal/exam: $goal
-Current level: $currentLevel
-Weak areas or confusion: $weakAreas
-
-Return:
-1. Diagnostic questions Nova should ask first
-2. A 7-day roadmap
-3. A 30-day roadmap
-4. What to study today
-5. What to quiz next
-
-Do not assume completed chapters, scores, streaks, or old progress. Use only the user-provided context.
-""".trimIndent()
-
-                val response = GroqClient.service.chat(
-                    GroqRequest(
-                        messages = listOf(GroqMessage("user", prompt)),
-                        maxTokens = 1000,
-                        temperature = 0.7f,
-                    )
-                )
-                Result.success(response.choices.firstOrNull()?.message?.content.orEmpty())
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
+    ): Result<String> = backendClient.roadmap(
+        SuhanovaAIRequest(
+            board = board,
+            studentClass = studentClass,
+            targetExam = targetExam,
+            goal = goal,
+            level = currentLevel,
+            weakAreas = weakAreas,
+            maxTokens = 1000,
+        )
+    )
 }
 
 @Composable
 fun RoadmapScreen(onBack: () -> Unit = {}) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
-    val repository = remember { RoadmapAIRepository() }
+    val repository = remember { RoadmapAIRepository(BackendClient(ctx)) }
     val scope = rememberCoroutineScope()
 
     var goal by remember { mutableStateOf("") }
