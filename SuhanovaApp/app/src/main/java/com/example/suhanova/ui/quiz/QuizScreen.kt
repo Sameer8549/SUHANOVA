@@ -34,21 +34,14 @@ val QUIZ_SUBJECTS = listOf(
     Triple("Mixed",     "✨", NovaGold),
 )
 
-val QUIZ_TOPICS = mapOf(
-    "Biology"   to listOf("Cell Biology", "Genetics", "Photosynthesis", "Human Physiology", "Ecology", "Molecular Biology"),
-    "Physics"   to listOf("Kinematics", "Laws of Motion", "Work & Energy", "Waves", "Optics", "Electrostatics"),
-    "Chemistry" to listOf("Atomic Structure", "Chemical Bonding", "Equilibrium", "Organic Chemistry", "Thermodynamics", "Electrochemistry"),
-    "Mixed"     to listOf("NEET Mixed — All Subjects"),
-)
-
 @Composable
 fun QuizScreen(onNavigate: (String) -> Unit) {
     val repository = remember { QuizRepository() }
     val scope      = rememberCoroutineScope()
 
     var screen by remember { mutableStateOf("subject_select") } // "subject_select" | "quiz" | "results"
-    var selectedSubject by remember { mutableStateOf("Biology") }
-    var selectedTopic   by remember { mutableStateOf("Cell Biology") }
+    var selectedSubject by remember { mutableStateOf("") }
+    var selectedTopic   by remember { mutableStateOf("") }
     var questions       by remember { mutableStateOf<List<GeneratedQuestion>>(emptyList()) }
     var isLoading       by remember { mutableStateOf(false) }
     var loadError       by remember { mutableStateOf("") }
@@ -68,7 +61,7 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
                 loadError     = loadError,
                 selectedSubject = selectedSubject,
                 selectedTopic   = selectedTopic,
-                onSubjectSelect = { selectedSubject = it; selectedTopic = QUIZ_TOPICS[it]?.firstOrNull() ?: "" },
+                onSubjectSelect = { selectedSubject = it },
                 onTopicSelect   = { selectedTopic = it },
                 onStart = {
                     isLoading = true
@@ -93,25 +86,7 @@ fun QuizScreen(onNavigate: (String) -> Unit) {
                                 isLoading      = false
                             },
                             onFailure = { err ->
-                                // Fallback to offline question bank
-                                questions = NEET_QUESTION_BANK.filter {
-                                    it.subject == selectedSubject || selectedSubject == "Mixed"
-                                }.shuffled().take(5).ifEmpty { NEET_QUESTION_BANK.shuffled().take(5) }
-
-                                loadError = when {
-                                    err.message?.contains("401") == true ->
-                                        "Using offline questions — add GROQ_API_KEY for AI-generated quizzes!"
-                                    err.message?.contains("connect") == true ->
-                                        "Offline mode — using practice questions from your question bank."
-                                    else -> "Using offline questions. (${err.message})"
-                                }
-                                questionIndex  = 0
-                                selectedOption = null
-                                answered       = false
-                                showExplanation = false
-                                score          = Triple(0, 0, 0)
-                                timeLeft       = 60
-                                screen         = "quiz"
+                                loadError = err.message ?: "AI quiz generation failed. Please try again."
                                 isLoading      = false
                             }
                         )
@@ -209,12 +184,12 @@ fun SubjectSelectScreen(
         contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp),
     ) {
         item {
-            Text("NEET Quiz ✨",
+            Text("AI Quiz ✨",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = NovaGold, fontWeight = FontWeight.ExtraBold
                 ))
             Spacer(Modifier.height(4.dp))
-            Text("Questions generated live by Mistral AI 🤖",
+            Text("Choose a subject and enter the exact topic. Nova generates the quiz live.",
                 style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary))
         }
 
@@ -258,38 +233,26 @@ fun SubjectSelectScreen(
         }
 
         item {
-            Text("CHOOSE TOPIC",
+            Text("ENTER TOPIC",
                 style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, letterSpacing = 2.sp))
             Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                QUIZ_TOPICS[selectedSubject]?.forEach { topic ->
-                    val selected = selectedTopic == topic
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) NovaGold.copy(alpha = 0.15f) else GlassBg)
-                            .border(
-                                if (selected) 2.dp else 1.dp,
-                                if (selected) NovaGold else GlassBorder,
-                                RoundedCornerShape(12.dp)
-                            )
-                            .clickable { onTopicSelect(topic) }
-                            .padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            topic,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = if (selected) NovaGold else TextPrimary,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            )
-                        )
-                        if (selected) Text("✓", style = MaterialTheme.typography.bodyMedium.copy(color = NovaGold, fontWeight = FontWeight.Bold))
-                    }
-                }
-            }
+            OutlinedTextField(
+                value = selectedTopic,
+                onValueChange = onTopicSelect,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Example: Osmosis, Thermodynamics, Organic reactions", color = TextMuted) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NovaGold,
+                    unfocusedBorderColor = GlassBorder,
+                    cursorColor = NovaGold,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    focusedContainerColor = GlassBg,
+                    unfocusedContainerColor = GlassBg,
+                ),
+                shape = RoundedCornerShape(14.dp),
+                singleLine = true,
+            )
         }
 
         item {
@@ -298,14 +261,14 @@ fun SubjectSelectScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = NovaGold, contentColor = SpaceBlack),
                 shape = CircleShape,
-                enabled = !isLoading,
+                enabled = !isLoading && selectedSubject.isNotBlank() && selectedTopic.isNotBlank(),
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = SpaceBlack, strokeWidth = 2.dp)
                     Spacer(Modifier.width(10.dp))
                     Text("Generating with Mistral AI...", fontWeight = FontWeight.Bold)
                 } else {
-                    Text("Start Quiz ✨", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Generate Live Quiz ✨", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -313,7 +276,7 @@ fun SubjectSelectScreen(
         if (loadError.isNotEmpty()) {
             item {
                 Text(
-                    "ℹ️ $loadError",
+                    "⚠ $loadError",
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = NovaGold, fontStyle = FontStyle.Italic, textAlign = TextAlign.Center
                     ),

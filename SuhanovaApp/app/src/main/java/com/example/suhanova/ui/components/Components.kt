@@ -154,7 +154,7 @@ fun GlassCard(
 fun NovaMomentCard(
     greeting: String,
     aiMessage: String,
-    neetDaysLeft: Int,
+    examCountdown: String,
     currentStreak: Int,
 ) {
     val infTrans = rememberInfiniteTransition(label = "novaMoment")
@@ -187,7 +187,7 @@ fun NovaMomentCard(
             Text("\"$aiMessage\"",
                 style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary, fontStyle = FontStyle.Italic, lineHeight = 22.sp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("🩺 $neetDaysLeft days to NEET", NovaGold)
+                Chip("🩺 $examCountdown", NovaGold)
                 Chip("🔥 $currentStreak Day Streak",  StellarPink)
             }
             HorizontalDivider(color = StellarPink.copy(alpha = 0.2f))

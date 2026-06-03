@@ -38,20 +38,16 @@ data class UiMessage(
 )
 
 val QUICK_ASKS = listOf(
-    "I'm confused about osmosis 💧",
-    "Explain Newton's 3rd Law ⚡",
-    "I keep forgetting Le Chatelier 🧪",
-    "What is mitosis vs meiosis? 🧬",
-    "I'm stressed about NEET 😔",
-    "Explain DNA replication 🧬",
-    "Help me with organic reactions 🧪",
-    "I don't understand electrostatics ⚡",
+    "Ask me 3 questions to understand my level",
+    "Make a study plan from my weak areas",
+    "Generate a quiz from my topic",
+    "Explain a topic I type next",
 )
 
 val WEAK_TOPIC_ASKS = listOf(
-    "📌 My weak area: Membrane Transport",
-    "📌 My weak area: Thermodynamics",
-    "📌 My weak area: Organic Reactions",
+    "Find my weak area first",
+    "Help me choose what to study today",
+    "Review my last confusion",
 )
 
 fun formatTime(ts: Long): String = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(ts))
@@ -68,10 +64,10 @@ fun NovaChatScreen() {
     // Initial welcome from Nova as best friend
     val welcomeText = remember {
         when {
-            hour in 0..3  -> "Hey Suhana! 🌙 Midnight study session? Honestly, that's iconic. I'm here. Ask me anything — I won't judge, I'll just explain. What are we tackling?"
-            hour in 4..11 -> "Good morning, Dr. Suhana! ☀️ You opened me first thing — that's the energy of a topper. What topic are we cracking today? I'm ready when you are! 🌟"
-            hour in 12..16 -> "Hey! 👋 Afternoon session — this is when most people slack off, but not you. What's confusing you? Let's sort it out together!"
-            else           -> "Evening, Suhana! 🌆 Prime study time. Give me your toughest question and I'll break it down like your smartest friend would. Let's go!"
+            hour in 0..3  -> "Nova is online. Tell me what you're studying, what feels hard, and what result you want from this session."
+            hour in 4..11 -> "Good morning. Before I teach, tell me your subject, current level, and the topic you want to improve."
+            hour in 12..16 -> "Let's make this session real. What topic should I diagnose first, and where are you getting stuck?"
+            else           -> "I'm ready. Send your goal, weak area, or exact question, and I'll adapt the answer to you."
         }
     }
 
@@ -136,7 +132,7 @@ fun NovaChatScreen() {
                         style = MaterialTheme.typography.titleMedium.copy(color = NovaGold, fontWeight = FontWeight.ExtraBold))
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(7.dp).clip(CircleShape).background(BioGreen))
-                        Text("Groq llama3 · Ready for anything 💬", style = MaterialTheme.typography.bodySmall.copy(color = BioGreen))
+                        Text("Live AI via Render · Ready 💬", style = MaterialTheme.typography.bodySmall.copy(color = BioGreen))
                     }
                 }
 

@@ -180,7 +180,7 @@ app.post("/api/groq", async (req, res) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: req.body.model || "llama3-70b-8192",
+      model: req.body.model || "llama-3.3-70b-versatile",
       messages: req.body.messages,
       max_tokens: req.body.max_tokens ?? 600,
       temperature: req.body.temperature ?? 0.7,

@@ -8,14 +8,42 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.suhanova.notifications.createNotificationChannels
 import com.example.suhanova.notifications.scheduleAllNotifications
 import com.example.suhanova.notifications.sendNovaNotification
 import com.example.suhanova.notifications.CHANNEL_NOVA
+import com.example.suhanova.theme.GlassBg
+import com.example.suhanova.theme.GlassBorder
+import com.example.suhanova.theme.NovaGold
+import com.example.suhanova.theme.SpaceBlack
 import com.example.suhanova.theme.SuhanovaTheme
+import com.example.suhanova.theme.TextMuted
+import com.example.suhanova.theme.TextPrimary
+import com.example.suhanova.theme.TextSecondary
+import java.time.LocalDate
+import java.time.ZoneId
 
 class MainActivity : ComponentActivity() {
 
@@ -77,5 +105,116 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SuhanovaApp() {
-    SuhanovaNavigation()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
+    var onboardingComplete by remember { mutableStateOf(prefs.getBoolean("onboarding_complete", false)) }
+
+    if (onboardingComplete) {
+        SuhanovaNavigation()
+    } else {
+        FirstRunQuestions {
+            prefs.edit()
+                .putString("goal", it.goal)
+                .putString("level", it.level)
+                .putString("weak_areas", it.weakAreas)
+                .putLong("exam_date_millis", it.examDateMillis)
+                .putBoolean("onboarding_complete", true)
+                .apply()
+            onboardingComplete = true
+        }
+    }
+}
+
+data class FirstRunAnswers(
+    val goal: String,
+    val level: String,
+    val weakAreas: String,
+    val examDateMillis: Long,
+)
+
+@Composable
+private fun FirstRunQuestions(onComplete: (FirstRunAnswers) -> Unit) {
+    var goal by remember { mutableStateOf("") }
+    var level by remember { mutableStateOf("") }
+    var weakAreas by remember { mutableStateOf("") }
+    var examDate by remember { mutableStateOf("") }
+    var dateError by remember { mutableStateOf("") }
+
+    Column(
+        Modifier.fillMaxSize().background(SpaceBlack).padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            "Set Up Nova",
+            style = MaterialTheme.typography.headlineMedium.copy(color = TextPrimary, fontWeight = FontWeight.ExtraBold),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Answer these once so the app starts from your real needs, not pre-added demo data.",
+            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
+        )
+        Spacer(Modifier.height(22.dp))
+
+        FirstRunInput(goal, { goal = it }, "What is your goal?", "Example: NEET 2026, Biology exam, improve Physics")
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(examDate, { examDate = it; dateError = "" }, "When is your NEET exam?", "YYYY-MM-DD, example: 2026-05-03")
+        if (dateError.isNotBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(dateError, style = MaterialTheme.typography.bodySmall.copy(color = NovaGold))
+        }
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(level, { level = it }, "What is your current level?", "Example: beginner, average, strong in Chemistry")
+        Spacer(Modifier.height(12.dp))
+        FirstRunInput(weakAreas, { weakAreas = it }, "What feels hard right now?", "Example: organic reactions, numericals, memorization")
+        Spacer(Modifier.height(22.dp))
+
+        Button(
+            onClick = {
+                val millis = parseExamDateMillis(examDate)
+                if (millis == null) {
+                    dateError = "Enter date like 2026-05-03"
+                } else {
+                    onComplete(FirstRunAnswers(goal, level, weakAreas, millis))
+                }
+            },
+            enabled = goal.isNotBlank() && examDate.isNotBlank(),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(containerColor = NovaGold, contentColor = SpaceBlack),
+        ) {
+            Text("Start Real-Time App", fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+private fun parseExamDateMillis(value: String): Long? = try {
+    LocalDate.parse(value.trim())
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+} catch (_: Exception) {
+    null
+}
+
+@Composable
+private fun FirstRunInput(value: String, onValueChange: (String) -> Unit, label: String, placeholder: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium.copy(color = NovaGold, fontWeight = FontWeight.Bold))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = TextMuted) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NovaGold,
+                unfocusedBorderColor = GlassBorder,
+                cursorColor = NovaGold,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                focusedContainerColor = GlassBg,
+                unfocusedContainerColor = GlassBg,
+            ),
+            shape = RoundedCornerShape(14.dp),
+        )
+    }
 }

@@ -15,17 +15,6 @@ data class WeakArea(
     val lastAttempted: Long = System.currentTimeMillis(),
 )
 
-// Suhana's current weak areas (in production this comes from Room DB quiz history)
-val SUHANA_WEAK_AREAS = listOf(
-    WeakArea("Biology",   "Membrane Transport",    0.35f),
-    WeakArea("Chemistry", "Thermodynamics",         0.40f),
-    WeakArea("Chemistry", "Organic Reactions",      0.45f),
-    WeakArea("Physics",   "Optics",                 0.48f),
-    WeakArea("Biology",   "Genetics",               0.52f),
-    WeakArea("Physics",   "Electrostatics",         0.55f),
-    WeakArea("Biology",   "Molecular Biology",      0.58f),
-)
-
 class PersonalizedQuizRepository {
 
     private val gson = Gson()
@@ -35,7 +24,7 @@ class PersonalizedQuizRepository {
      * Uses Mistral to create contextually aware, pedagogically sound questions.
      */
     suspend fun generatePersonalizedQuiz(
-        weakAreas: List<WeakArea> = SUHANA_WEAK_AREAS,
+        weakAreas: List<WeakArea>,
         count: Int = 5,
     ): Result<List<GeneratedQuestion>> = withContext(Dispatchers.IO) {
         try {
@@ -44,7 +33,7 @@ class PersonalizedQuizRepository {
             val targetDesc = targets.joinToString(", ") { "${it.topic} (${it.subject})" }
 
             val prompt = """
-You are creating a PERSONALIZED quiz for a student named Suhana who is preparing for NEET 2025.
+You are creating a PERSONALIZED quiz for a student preparing for NEET.
 
 IMPORTANT: Suhana specifically struggles with these topics (ordered by weakness):
 ${targets.mapIndexed { i, wa -> "${i+1}. ${wa.topic} (${wa.subject}) — she scores ${(wa.accuracy * 100).toInt()}% on average" }.joinToString("\n")}
@@ -87,18 +76,8 @@ Return ONLY valid JSON (no extra text):
             Result.success(wrapper.questions)
 
         } catch (e: Exception) {
-            // Fallback: return personalized offline questions targeting her weak areas
-            val fallback = buildPersonalizedFallback(weakAreas)
-            Result.success(fallback)
+            Result.failure(e)
         }
-    }
-
-    private fun buildPersonalizedFallback(weakAreas: List<WeakArea>): List<GeneratedQuestion> {
-        // Filter NEET_QUESTION_BANK by her weak areas first
-        val weak = weakAreas.sortedBy { it.accuracy }.map { it.topic.lowercase() }
-        return NEET_QUESTION_BANK.sortedByDescending { q ->
-            weak.indexOfFirst { w -> q.topic.lowercase().contains(w) }.let { if (it >= 0) weak.size - it else -1 }
-        }.take(5)
     }
 }
 
@@ -132,7 +111,7 @@ class NovaBestFriendRepository {
             }
 
             val prompt = """
-You are Nova — Suhana's AI best friend and study companion. She is preparing for NEET 2025 to become a doctor.
+You are Nova — the user's AI best friend and study companion. They are preparing for NEET.
 
 Context:
 - $timeContext
@@ -183,7 +162,7 @@ Just the message text — no quotes, no labels.
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val bestFriendPrompt = """
-You are Nova — Suhana's AI best friend, study partner, and personal NEET coach. She is preparing for NEET 2025.
+You are Nova — the user's AI best friend, study partner, and personal NEET coach.
 
 Your personality:
 - You're like her brilliant best friend who happens to have topped NEET
@@ -218,7 +197,7 @@ Always end with a micro-tip specific to NEET.
         } catch (e: Exception) {
             val errMsg = when {
                 e.message?.contains("401") == true ->
-                    "🔑 Add your GROQ_API_KEY to local.properties to unlock real AI responses!"
+                    "AI service is unavailable. Check the backend configuration and try again."
                 e.message?.contains("connect") == true ->
                     "📶 You're offline — but I'm still here! Check your connection and ask again."
                 else -> "⚠️ Nova had a moment. Try again! (${e.message?.take(50)})"

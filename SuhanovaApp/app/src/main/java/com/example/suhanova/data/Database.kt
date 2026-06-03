@@ -11,7 +11,7 @@ import java.util.Date
 data class UserProfile(
     @PrimaryKey val id: Int = 1,
     val name: String = "Suhana",
-    val neetExamDate: Long = 1752710400000L, // July 17 2025
+    val neetExamDate: Long = 0L,
     val weakSubjects: String = "",           // comma-separated
     val biometricEnrolled: Boolean = false,
     val pin: String = "",

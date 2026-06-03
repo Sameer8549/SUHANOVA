@@ -22,12 +22,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.suhanova.data.SuhanovaDatabase
-import com.example.suhanova.network.getNEETDaysLeft
 import com.example.suhanova.theme.*
 import com.example.suhanova.ui.components.*
 import com.example.suhanova.ui.utils.hapticClick
 import androidx.compose.ui.res.painterResource
 import com.example.suhanova.R
+import kotlinx.coroutines.delay
 import java.util.Calendar
 
 data class SubjectInfo(val emoji: String, val name: String, val color: Color, val route: String = "study")
@@ -47,13 +47,6 @@ fun getGreeting(): String = when (Calendar.getInstance().get(Calendar.HOUR_OF_DA
     else      -> "Late night grind, Suhana 🌟"
 }
 
-val AI_MESSAGES = listOf(
-    "Every diagram you study today is a patient you'll save tomorrow.",
-    "NEET is a door. You have the key. You've had it all along.",
-    "Today's hard topic is tomorrow's easy question in the exam hall.",
-    "You chose medicine because you care. That answer is already inside you.",
-)
-
 val quickActions = listOf(
     Triple("✨", "Today's\nQuiz",  "quiz"),
     Triple("🎥", "Library\nHub",  "library"),
@@ -65,9 +58,19 @@ val quickActions = listOf(
 fun HomeScreen(onNavigate: (String) -> Unit) {
     val ctx      = LocalContext.current
     val db       = remember { SuhanovaDatabase.getDatabase(ctx) }
+    val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
     val greeting = remember { getGreeting() }
-    val aiMsg    = remember { AI_MESSAGES.random() }
-    val neetDays = remember { getNEETDaysLeft() }
+    val setupGoal = remember { setupPrefs.getString("goal", "") ?: "" }
+    val setupWeakAreas = remember { setupPrefs.getString("weak_areas", "") ?: "" }
+    val examDateMillis = remember { setupPrefs.getLong("exam_date_millis", 0L) }
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(examDateMillis) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
 
     // Real data from DB
     val profile         by db.userProfileDao().getProfile().collectAsStateWithLifecycle(null)
@@ -91,6 +94,19 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
     )
 
     val lastSession = recentSessions.firstOrNull()
+    val examCountdown = remember(examDateMillis, nowMillis) {
+        formatExamCountdown(examDateMillis, nowMillis)
+    }
+    val aiMsg = when {
+        totalQuizzes == 0 && setupWeakAreas.isNotBlank() ->
+            "Start with ${setupWeakAreas}. I will generate live questions from your exact topic."
+        totalQuizzes == 0 && setupGoal.isNotBlank() ->
+            "Your goal is $setupGoal. Start with a live quiz or ask Nova to diagnose your level."
+        totalQuizzes == 0 ->
+            "No old progress loaded. Start a live quiz or study session to build your real data."
+        else ->
+            "Your dashboard is now based on real quiz sessions saved on this device."
+    }
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
@@ -143,7 +159,7 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             // ── Nova Moment Card ──────────────────────────────────────────────
             item {
                 AnimatedVisibility(visible, enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { 40 }) {
-                    NovaMomentCard(greeting, aiMsg, neetDays, streak)
+                    NovaMomentCard(greeting, aiMsg, examCountdown, streak)
                 }
             }
 
@@ -330,4 +346,14 @@ fun HomeScreen(onNavigate: (String) -> Unit) {
             }
         }
     }
+}
+
+private fun formatExamCountdown(examDateMillis: Long, nowMillis: Long): String {
+    if (examDateMillis <= 0L) return "Exam date not set"
+    val remainingSeconds = ((examDateMillis - nowMillis) / 1000L).coerceAtLeast(0L)
+    val days = remainingSeconds / 86_400L
+    val hours = (remainingSeconds % 86_400L) / 3_600L
+    val minutes = (remainingSeconds % 3_600L) / 60L
+    val seconds = remainingSeconds % 60L
+    return "${days}d ${hours}h ${minutes}m ${seconds}s to NEET"
 }

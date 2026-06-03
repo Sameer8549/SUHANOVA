@@ -199,7 +199,7 @@ fun SettingsScreen() {
                     HorizontalDivider(color = GlassBorder)
                     SettingsRow("AI Engine", "Groq llama3 + Mistral")
                     HorizontalDivider(color = GlassBorder)
-                    SettingsRow("Target Exam", "NEET 2025")
+                    SettingsRow("Target Exam", "Set during first launch")
                 }
             }
 

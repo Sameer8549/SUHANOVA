@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.suhanova.data.QuizSession
 import com.example.suhanova.data.SuhanovaDatabase
-import com.example.suhanova.network.getNEETDaysLeft
 import com.example.suhanova.theme.*
 import com.example.suhanova.ui.components.*
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,6 +34,16 @@ import java.util.*
 fun ProgressScreen() {
     val ctx = LocalContext.current
     val db  = remember { SuhanovaDatabase.getDatabase(ctx) }
+    val setupPrefs = remember { ctx.getSharedPreferences("suhanova_first_run", android.content.Context.MODE_PRIVATE) }
+    val examDateMillis = remember { setupPrefs.getLong("exam_date_millis", 0L) }
+    var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(examDateMillis) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
 
     // Real data from Room DB
     val recentSessions by db.quizSessionDao().getRecentSessions().collectAsStateWithLifecycle(emptyList())
@@ -42,7 +52,9 @@ fun ProgressScreen() {
     val chemAccuracy   by db.quizSessionDao().getSubjectAccuracy("Chemistry").collectAsStateWithLifecycle(null)
     val profile        by db.userProfileDao().getProfile().collectAsStateWithLifecycle(null)
 
-    val neetDays = remember { getNEETDaysLeft() }
+    val neetCountdown = remember(examDateMillis, nowMillis) {
+        formatProgressExamCountdown(examDateMillis, nowMillis)
+    }
     val totalQuizzes = recentSessions.size
     val totalCorrect = recentSessions.sumOf { it.correctAnswers }
     val totalQuestions = recentSessions.sumOf { it.totalQuestions }
@@ -113,7 +125,7 @@ fun ProgressScreen() {
                             ),
                         )
                         Text(
-                            "$neetDays days to NEET — start now!",
+                            "$neetCountdown — start now!",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = StellarPink, fontWeight = FontWeight.Bold,
                             ),
@@ -137,7 +149,7 @@ fun ProgressScreen() {
                         ReadinessRing(readinessScore)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Chip("$totalQuizzes quizzes done", BioGreen)
-                            Chip("$neetDays days left", StellarPink)
+                            Chip(neetCountdown, StellarPink)
                         }
                         Text(
                             when {
@@ -248,4 +260,14 @@ fun ProgressScreen() {
             }
         }
     }
+}
+
+private fun formatProgressExamCountdown(examDateMillis: Long, nowMillis: Long): String {
+    if (examDateMillis <= 0L) return "Exam date not set"
+    val remainingSeconds = ((examDateMillis - nowMillis) / 1000L).coerceAtLeast(0L)
+    val days = remainingSeconds / 86_400L
+    val hours = (remainingSeconds % 86_400L) / 3_600L
+    val minutes = (remainingSeconds % 3_600L) / 60L
+    val seconds = remainingSeconds % 60L
+    return "${days}d ${hours}h ${minutes}m ${seconds}s left"
 }
