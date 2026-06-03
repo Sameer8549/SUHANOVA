@@ -69,7 +69,79 @@ function requireFields(res, body, fields) {
 }
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true, service: "SkillIQ backend" });
+  res.json({ ok: true, service: "Suhanova backend" });
+});
+
+app.post("/suhanova/setup", (req, res) => {
+  const setup = {
+    name: req.body.name || "Suhana",
+    board: req.body.board || "",
+    studentClass: req.body.studentClass || req.body.student_class || "",
+    targetExam: req.body.targetExam || req.body.target_exam || "",
+    examDate: req.body.examDate || req.body.exam_date || "",
+    goal: req.body.goal || "",
+    level: req.body.level || "",
+    weakAreas: req.body.weakAreas || req.body.weak_areas || "",
+  };
+
+  res.json({
+    ok: true,
+    service: "Suhanova backend",
+    setup,
+  });
+});
+
+app.post("/suhanova/study-plan", async (req, res) => {
+  const messages = normalizeMessages([
+    {
+      role: "user",
+      content: `Create a study plan for:
+Board: ${req.body.board || ""}
+Class: ${req.body.studentClass || req.body.student_class || ""}
+Target exam: ${req.body.targetExam || req.body.target_exam || ""}
+Topic: ${req.body.topic || req.body.goal || ""}
+Level: ${req.body.level || ""}
+Weak areas: ${req.body.weakAreas || req.body.weak_areas || ""}
+
+Return diagnostic questions, a focused plan, flashcards, and a practice task.`,
+    },
+  ]);
+
+  return proxyGroq(res, messages, normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 900), 0.65);
+});
+
+app.post("/suhanova/roadmap", async (req, res) => {
+  const messages = normalizeMessages([
+    {
+      role: "user",
+      content: `Create a personalized learning roadmap for:
+Board: ${req.body.board || ""}
+Class: ${req.body.studentClass || req.body.student_class || ""}
+Target exam: ${req.body.targetExam || req.body.target_exam || ""}
+Goal: ${req.body.goal || ""}
+Current level: ${req.body.level || ""}
+Weak areas: ${req.body.weakAreas || req.body.weak_areas || ""}
+
+Return diagnostic questions, a 7-day roadmap, a 30-day roadmap, today's task, and next quiz topic.`,
+    },
+  ]);
+
+  return proxyGroq(res, messages, normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 1000), 0.7);
+});
+
+app.post("/suhanova/library/search", (req, res) => {
+  const board = req.body.board || "";
+  const studentClass = req.body.studentClass || req.body.student_class || "";
+  const subject = req.body.subject || "";
+  const chapter = req.body.chapter || req.body.topic || "";
+  const baseQuery = [board, studentClass, subject, chapter].filter(Boolean).join(" ");
+
+  res.json({
+    ok: true,
+    notesQuery: `${baseQuery} notes`,
+    questionsQuery: `${baseQuery} important questions`,
+    videosQuery: `${baseQuery} video lecture`,
+  });
 });
 
 app.post("/auth/signup", (req, res) => {
@@ -180,6 +252,19 @@ app.post("/api/groq", async (req, res) => {
     return res.status(400).json({ error: "messages must contain at least one chat message" });
   }
 
+  return proxyGroq(
+    res,
+    messages,
+    normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 600),
+    normalizeNumber(req.body.temperature, 0.7),
+  );
+});
+
+async function proxyGroq(res, messages, maxTokens, temperature) {
+  if (!GROQ_API_KEY) {
+    return res.status(503).json({ error: "GROQ_API_KEY is not configured on the backend" });
+  }
+
   const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -189,14 +274,14 @@ app.post("/api/groq", async (req, res) => {
     body: JSON.stringify({
       model: GROQ_DEFAULT_MODEL,
       messages,
-      max_tokens: normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 600),
-      temperature: normalizeNumber(req.body.temperature, 0.7),
+      max_tokens: maxTokens,
+      temperature,
       stream: false,
     }),
   });
 
-  res.status(upstream.status).json(await upstream.json());
-});
+  return res.status(upstream.status).json(await upstream.json());
+}
 
 app.post("/api/mistral", async (req, res) => {
   if (!MISTRAL_API_KEY) {
