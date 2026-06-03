@@ -13,7 +13,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import java.util.concurrent.TimeUnit
 
-const val SKILLIQ_BACKEND_BASE_URL = "https://see-attachments-greene-shoes.trycloudflare.com/"
+const val SKILLIQ_BACKEND_BASE_URL = "https://suhanova.onrender.com/"
 
 data class BackendHealthResponse(
     val ok: Boolean,
