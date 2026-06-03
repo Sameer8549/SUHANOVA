@@ -9,8 +9,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -155,6 +162,7 @@ fun SuhanovaApp() {
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun PersonalizedStartup(onDone: () -> Unit) {
     val photos = remember {
@@ -177,14 +185,24 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
     }
     var index by remember { mutableIntStateOf(0) }
     val imageScale by animateFloatAsState(
-        targetValue = if (index % 2 == 0) 1.08f else 1.02f,
-        animationSpec = tween(1600),
+        targetValue = if (index % 2 == 0) 1.13f else 1.06f,
+        animationSpec = tween(1800),
         label = "startupImageScale",
     )
-    val textAlpha by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(800),
-        label = "startupTextAlpha",
+    val imageRotation by animateFloatAsState(
+        targetValue = if (index % 2 == 0) -1.8f else 1.6f,
+        animationSpec = tween(1800),
+        label = "startupImageRotation",
+    )
+    val logoTilt by animateFloatAsState(
+        targetValue = if (index % 2 == 0) -8f else -2f,
+        animationSpec = tween(900),
+        label = "startupLogoTilt",
+    )
+    val logoAlpha by animateFloatAsState(
+        targetValue = 0.94f,
+        animationSpec = tween(600),
+        label = "startupLogoAlpha",
     )
 
     LaunchedEffect(Unit) {
@@ -204,10 +222,24 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
                 modifier = Modifier.fillMaxSize().graphicsLayer {
                     scaleX = imageScale
                     scaleY = imageScale
+                    rotationZ = imageRotation
+                    translationX = if (index % 2 == 0) -28f else 28f
+                    translationY = if (index % 2 == 0) 18f else -18f
                 },
                 contentScale = ContentScale.Crop,
             )
         }
+
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    listOf(
+                        NovaGold.copy(alpha = 0.16f),
+                        Color.Transparent,
+                    )
+                )
+            )
+        )
 
         Box(
             Modifier.fillMaxSize().background(
@@ -235,40 +267,64 @@ private fun PersonalizedStartup(onDone: () -> Unit) {
                 }
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier.size(72.dp).clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(NovaGold, Color(0xFFFF6EB4)))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("S", style = MaterialTheme.typography.headlineMedium.copy(color = SpaceBlack, fontWeight = FontWeight.ExtraBold))
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                Image(
+                    painter = painterResource(R.drawable.startup_logo),
+                    contentDescription = "Suhanova logo",
+                    modifier = Modifier
+                        .size(86.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .graphicsLayer {
+                            alpha = logoAlpha
+                            rotationZ = logoTilt
+                            shadowElevation = 18f
+                        },
+                    contentScale = ContentScale.Crop,
+                )
             }
 
             Column(
-                Modifier.fillMaxWidth().graphicsLayer { alpha = textAlpha },
+                Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    lines[index],
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 32.sp,
-                    ),
-                    textAlign = TextAlign.Center,
-                )
-                Text(
-                    "Suhanova was not made like a normal app. It was made like a promise.",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.White.copy(alpha = 0.86f),
-                        textAlign = TextAlign.Center,
-                        lineHeight = 22.sp,
-                    ),
-                    textAlign = TextAlign.Center,
-                )
+                AnimatedContent(
+                    targetState = index,
+                    transitionSpec = {
+                        (fadeIn(tween(450)) + slideInVertically(tween(650)) { it / 2 }) togetherWith
+                            (fadeOut(tween(250)) + slideOutVertically(tween(300)) { -it / 3 })
+                    },
+                    label = "startupText",
+                ) { textIndex ->
+                    Column(
+                        Modifier.fillMaxWidth().graphicsLayer {
+                            scaleX = 1.02f
+                            scaleY = 1.02f
+                        },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            lines[textIndex],
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 32.sp,
+                            ),
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            "Suhanova was not made like a normal app. It was made like a promise.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = Color.White.copy(alpha = 0.88f),
+                                textAlign = TextAlign.Center,
+                                lineHeight = 22.sp,
+                            ),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
         }
     }
