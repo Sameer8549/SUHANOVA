@@ -144,6 +144,34 @@ app.post("/suhanova/library/search", (req, res) => {
   });
 });
 
+app.post("/suhanova/chat", async (req, res) => {
+  const messages = normalizeMessages(req.body.messages);
+  if (messages.length === 0) {
+    return res.status(400).json({ error: "messages must contain at least one chat message" });
+  }
+
+  return proxyGroq(
+    res,
+    messages,
+    normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 700),
+    normalizeNumber(req.body.temperature, 0.75),
+  );
+});
+
+app.post("/suhanova/quiz", async (req, res) => {
+  const messages = normalizeMessages(req.body.messages);
+  if (messages.length === 0) {
+    return res.status(400).json({ error: "messages must contain at least one chat message" });
+  }
+
+  return proxyMistral(
+    res,
+    messages,
+    normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 1800),
+    normalizeNumber(req.body.temperature, 0.3),
+  );
+});
+
 app.post("/auth/signup", (req, res) => {
   if (!requireFields(res, req.body, ["name", "email", "password"])) return;
 
@@ -298,6 +326,19 @@ app.post("/api/mistral", async (req, res) => {
     return res.status(400).json({ error: "messages must contain at least one chat message" });
   }
 
+  return proxyMistral(
+    res,
+    messages,
+    normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 1500),
+    normalizeNumber(req.body.temperature, 0.3),
+  );
+});
+
+async function proxyMistral(res, messages, maxTokens, temperature) {
+  if (!MISTRAL_API_KEY) {
+    return res.json(fallbackChatCompletion("mistral-fallback", fallbackQuizJson("Mistral AI is not configured on the backend yet. Add MISTRAL_API_KEY in Render and redeploy.")));
+  }
+
   const upstream = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -307,8 +348,8 @@ app.post("/api/mistral", async (req, res) => {
     body: JSON.stringify({
       model: MISTRAL_DEFAULT_MODEL,
       messages,
-      max_tokens: normalizeNumber(req.body.max_tokens ?? req.body.maxTokens, 1500),
-      temperature: normalizeNumber(req.body.temperature, 0.3),
+      max_tokens: maxTokens,
+      temperature,
     }),
   });
 
@@ -318,7 +359,7 @@ app.post("/api/mistral", async (req, res) => {
   }
 
   return res.json(data);
-});
+}
 
 function normalizeMessages(messages) {
   if (!Array.isArray(messages)) return [];

@@ -65,12 +65,12 @@ data class MistralResponse(
 // ─── RETROFIT INTERFACES ──────────────────────────────────────────────────────
 
 interface NovaGroqService {
-    @POST("api/groq")
+    @POST("suhanova/chat")
     suspend fun chat(@Body request: GroqRequest): GroqResponse
 }
 
 interface NovaMistralService {
-    @POST("api/mistral")
+    @POST("suhanova/quiz")
     suspend fun generate(@Body request: MistralRequest): MistralResponse
 }
 
