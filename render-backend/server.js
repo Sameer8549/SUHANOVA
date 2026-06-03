@@ -262,7 +262,7 @@ app.post("/api/groq", async (req, res) => {
 
 async function proxyGroq(res, messages, maxTokens, temperature) {
   if (!GROQ_API_KEY) {
-    return res.status(503).json({ error: "GROQ_API_KEY is not configured on the backend" });
+    return res.json(fallbackChatCompletion("groq-fallback", "Nova AI is not configured on the backend yet. Add GROQ_API_KEY in Render and redeploy."));
   }
 
   const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -280,12 +280,17 @@ async function proxyGroq(res, messages, maxTokens, temperature) {
     }),
   });
 
-  return res.status(upstream.status).json(await upstream.json());
+  const data = await upstream.json().catch(() => ({}));
+  if (!upstream.ok) {
+    return res.json(fallbackChatCompletion(GROQ_DEFAULT_MODEL, cleanProviderError(data, "Nova AI had a backend issue. Please try again.")));
+  }
+
+  return res.json(data);
 }
 
 app.post("/api/mistral", async (req, res) => {
   if (!MISTRAL_API_KEY) {
-    return res.status(503).json({ error: "MISTRAL_API_KEY is not configured on the backend" });
+    return res.json(fallbackChatCompletion("mistral-fallback", fallbackQuizJson("Mistral AI is not configured on the backend yet. Add MISTRAL_API_KEY in Render and redeploy.")));
   }
 
   const messages = normalizeMessages(req.body.messages);
@@ -307,7 +312,12 @@ app.post("/api/mistral", async (req, res) => {
     }),
   });
 
-  res.status(upstream.status).json(await upstream.json());
+  const data = await upstream.json().catch(() => ({}));
+  if (!upstream.ok) {
+    return res.json(fallbackChatCompletion(MISTRAL_DEFAULT_MODEL, fallbackQuizJson(cleanProviderError(data, "Quiz AI had a backend issue. Please try again."))));
+  }
+
+  return res.json(data);
 });
 
 function normalizeMessages(messages) {
@@ -323,6 +333,50 @@ function normalizeMessages(messages) {
 function normalizeNumber(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function cleanProviderError(data, fallback) {
+  return data?.error?.message || data?.message || fallback;
+}
+
+function fallbackChatCompletion(model, content) {
+  return {
+    id: `fallback-${Date.now()}`,
+    object: "chat.completion",
+    created: Math.floor(Date.now() / 1000),
+    model,
+    choices: [
+      {
+        index: 0,
+        finish_reason: "stop",
+        message: {
+          role: "assistant",
+          content,
+        },
+      },
+    ],
+  };
+}
+
+function fallbackQuizJson(reason) {
+  return JSON.stringify({
+    questions: [
+      {
+        question: "The AI quiz service could not generate questions right now. What should you do next?",
+        options: [
+          "Try again with a more specific topic",
+          "Ignore the topic forever",
+          "Close the app permanently",
+          "Use random answers without studying",
+        ],
+        correctIndex: 0,
+        explanation: reason,
+        subject: "General",
+        topic: "AI service status",
+        difficulty: "Easy",
+      },
+    ],
+  });
 }
 
 app.use((err, _req, res, _next) => {
